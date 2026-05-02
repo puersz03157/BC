@@ -1,0 +1,15 @@
+GitHub Pages 用這個 docs 資料夾當網站根目錄。
+
+你目前的 DIST.zip 內容是「專案／資源匯出」（.gdc、.godot 等），不是瀏覽器能開的網頁包。請改從 Godot 做「Web」匯出：
+
+1. 開啟本專案 → Project → Export…
+2. 選預設「Web」→ Export Project…
+3. 先匯出到本機任意暫存資料夾（會得到 index.html、.wasm、.js、.pck 等一組檔案）。
+4. 把「該資料夾裡的全部檔案」複製到本 repo 的 wilderness_home/docs/ 底下（可覆蓋本說明檔；請保留 .nojekyll 這個空檔，避免 GitHub 用 Jekyll 處理而壞檔）。
+5. GitHub 倉庫 → Settings → Pages → Build and deployment → Source 選 Deploy from a branch → Branch 選 main（或你的預設分支）→ Folder 選 /docs → Save。
+6. 幾分鐘後用 https://你的帳號.github.io/倉庫名稱/ 開啟（若倉庫在子資料夾，路徑會多一層，以 GitHub 顯示為準）。
+
+若 Pages 網址是子路徑（例如 /wilderness_home/），Godot Web 匯出選項裡若有「Export Path」相關的 base path，需在編輯器 Export → Web → 查「HTML」區是否有自訂路徑／子目錄設定，依官方文件調整。
+
+【倉庫根目錄在哪？】GitHub Pages 只能選「倉庫最外層的 /docs 或 /(root)」。
+若你 push 的是整個 CB 資料夾，而 CB 裡還有 wilderness_home 子資料夾，則應把 index.html 那一包放到 CB/docs/（倉庫根下的 docs），而不是 wilderness_home/docs/。若你單獨把 wilderness_home 當成一個 Git 倉庫，則用現在這個 wilderness_home/docs/ 即可。

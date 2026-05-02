@@ -1,0 +1,5 @@
+# Godot
+.godot/
+
+# Local export zip (optional)
+DIST.zip

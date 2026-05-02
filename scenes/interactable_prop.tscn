@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqx7wildprop01"]
+
+[ext_resource type="Script" path="res://scripts/world_prop_static.gd" id="1_script"]
+
+[node name="InteractableProp" type="StaticBody2D"]
+collision_layer = 1
+collision_mask = 0
+script = ExtResource("1_script")

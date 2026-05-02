@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bqx7loosepick01"]
+
+[ext_resource type="Script" path="res://scripts/loose_pickup.gd" id="1_script"]
+
+[node name="LoosePickup" type="Area2D"]
+script = ExtResource("1_script")

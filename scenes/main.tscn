@@ -1,0 +1,125 @@
+[gd_scene format=3 uid="uid://cwsv8ifdj6p8w"]
+
+[ext_resource type="Script" uid="uid://c4gkbx1586o3e" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="PackedScene" uid="uid://bqx7player01" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="Script" uid="uid://dnpwn5e1ece7s" path="res://scripts/ground_backdrop.gd" id="3_backdrop"]
+
+[node name="Main" type="Node2D" unique_id=707544429]
+script = ExtResource("1_main")
+
+[node name="Backdrop" type="Node2D" parent="." unique_id=1655132366]
+script = ExtResource("3_backdrop")
+
+[node name="Bounds" type="Node2D" parent="." unique_id=1087203534]
+
+[node name="WorldYSort" type="Node2D" parent="." unique_id=477823185]
+y_sort_enabled = true
+
+[node name="Entities" type="Node2D" parent="WorldYSort" unique_id=1884658657]
+
+[node name="Player1" parent="WorldYSort" unique_id=1080575537 instance=ExtResource("2_player")]
+position = Vector2(640, 360)
+
+[node name="Player2" parent="WorldYSort" unique_id=1740227473 instance=ExtResource("2_player")]
+position = Vector2(688, 360)
+player_index = 1
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1595578830]
+position = Vector2(640, 360)
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1997238954]
+
+[node name="UI" type="Control" parent="CanvasLayer" unique_id=1460374512]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="QuestPanel" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1210688142]
+layout_mode = 0
+offset_left = 16.0
+offset_top = 8.0
+offset_right = 1264.0
+offset_bottom = 76.0
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/QuestPanel" unique_id=308873516]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="QuestText" type="RichTextLabel" parent="CanvasLayer/UI/QuestPanel/MarginContainer" unique_id=2100960326]
+layout_mode = 2
+bbcode_enabled = true
+text = "載入..."
+fit_content = true
+scroll_active = false
+autowrap_mode = 2
+
+[node name="HintHelpBtn" type="Button" parent="CanvasLayer/UI" unique_id=997138738]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -48.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 44.0
+grow_horizontal = 0
+grow_vertical = 0
+focus_mode = 0
+theme_override_font_sizes/font_size = 18
+text = "?"
+flat = true
+
+[node name="HintPopup" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1662609111]
+visible = false
+layout_mode = 0
+offset_left = 320.0
+offset_top = 48.0
+offset_right = 1252.0
+offset_bottom = 188.0
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/HintPopup" unique_id=1599315414]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 10
+
+[node name="HintText" type="Label" parent="CanvasLayer/UI/HintPopup/MarginContainer" unique_id=1311277472]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 2
+
+[node name="InvBar" type="PanelContainer" parent="CanvasLayer/UI" unique_id=681791824]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -220.0
+offset_right = -10.0
+offset_bottom = -8.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="MessageToast" type="Label" parent="CanvasLayer/UI" unique_id=1997176476]
+visible = false
+layout_mode = 0
+offset_left = 240.0
+offset_top = 220.0
+offset_right = 1040.0
+offset_bottom = 292.0
+theme_override_colors/font_color = Color(0.95, 0.94, 0.9, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.75)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+vertical_alignment = 1
