@@ -6,6 +6,8 @@ extends Node2D
 const HUD_TOP_BLOCK := 88.0
 ## YATI 會把 .tmj 匯成 PackedScene；實際 tscn 在 .godot/imported/，執行時用此路徑 load 即可。
 const TILED_MAP_PATH := "res://assets/maps/Map00.tmj"
+## Web 無系統中文字型；用 Noto CJK 當 ThemeDB fallback，避免 UI 變方塊。
+const UI_CJK_FONT := "res://assets/fonts/NotoSansCJKtc-Regular.otf"
 
 enum BuildKind { NONE, CAMPFIRE, FLOOR, FENCE, DOOR, DISMANTLE }
 
@@ -39,9 +41,13 @@ var _campfire_script: Script = preload("res://scripts/campfire_marker.gd")
 ## 隨機生成樹／石／掉落物時避開：Water 任意圖塊、onGround 上 Rock Slope（含樓梯）。
 var _spawn_avoid_water_layers: Array[TileMapLayer] = []
 var _spawn_avoid_onground_layers: Array[TileMapLayer] = []
+## 單人觸控導航：對應的觸控點 index（-1 表示無）。
+var _p1_touch_idx: int = -1
+var _mobile_touch_bar: Control
 
 
 func _ready() -> void:
+	_apply_ui_cjk_font()
 	add_to_group("game_main")
 	player1.player_index = 0
 	player2.player_index = 1
@@ -59,8 +65,72 @@ func _ready() -> void:
 	_show_hint()
 	hint_popup.visible = false
 	hint_help_btn.pressed.connect(_toggle_hint_popup)
+	_setup_mobile_touch_bar()
 	camera.make_current()
 	camera.position = player1.global_position
+
+
+func _apply_ui_cjk_font() -> void:
+	if not ResourceLoader.exists(UI_CJK_FONT):
+		push_warning("Main: 缺少中文字型：%s" % UI_CJK_FONT)
+		return
+	var ff := FontFile.new()
+	var err := ff.load_dynamic_font(UI_CJK_FONT)
+	if err != OK:
+		push_warning("Main: 字型載入失敗：%s" % error_string(err))
+		return
+	ThemeDB.fallback_font = ff
+
+
+func _setup_mobile_touch_bar() -> void:
+	if not (OS.has_feature("web") or DisplayServer.is_touchscreen_available()):
+		return
+	var ui := $CanvasLayer/UI as Control
+	var bar := HBoxContainer.new()
+	bar.name = "MobileTouchBar"
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.add_theme_constant_override("separation", 6)
+	ui.add_child(bar)
+	bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	# 避開右上角「?」說明鈕（約 -48~-12）
+	bar.offset_left = -520.0
+	bar.offset_top = 44.0
+	bar.offset_right = -56.0
+	bar.offset_bottom = 92.0
+	bar.add_child(_mk_mobile_btn("採集", _mobile_btn_harvest))
+	bar.add_child(_mk_mobile_btn("門", _mobile_btn_door))
+	bar.add_child(_mk_mobile_btn("斧", _try_craft_axe))
+	bar.add_child(_mk_mobile_btn("裝", _mobile_btn_equip))
+	bar.add_child(_mk_mobile_btn("火", _toggle_campfire_build))
+	bar.add_child(_mk_mobile_btn("雙", _toggle_two_player))
+	_mobile_touch_bar = bar
+
+
+func _mk_mobile_btn(txt: String, cb: Callable) -> Button:
+	var b := Button.new()
+	b.text = txt
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = Control.MOUSE_FILTER_STOP
+	b.custom_minimum_size = Vector2(56, 40)
+	b.pressed.connect(cb)
+	return b
+
+
+func _mobile_btn_harvest() -> void:
+	try_harvest_near(player1, 0)
+
+
+func _mobile_btn_door() -> void:
+	try_use_near(player1, 0)
+
+
+func _mobile_btn_equip() -> void:
+	if inv.try_equip_axe_from_inventory():
+		_show_msg("已裝備石斧。")
+		_update_inv_bar()
+		_update_quest_ui()
+	else:
+		_show_msg("沒有可裝備的石斧。")
 
 
 func _load_tiled_map_if_present() -> void:
@@ -176,7 +246,10 @@ func _tileset_source_is_rock_slope(ts: TileSet, source_id: int) -> bool:
 
 
 func _show_hint() -> void:
-	hint_label.text = "WASD 移動｜F／Space：採集、砍樹｜G：木門開關（與建造分開）｜1 製作石斧｜Q 裝備｜2 營火｜底部選建造後「左鍵」才放板／牆／門｜Tab 雙人｜2P：E 採集、G 開門、左鍵採集（非建造時）"
+	var t := "WASD 移動｜F／Space：採集、砍樹｜G：木門開關（與建造分開）｜1 製作石斧｜Q 裝備｜2 營火｜底部選建造後「左鍵」才放板／牆／門｜Tab 雙人｜2P：E 採集、G 開門、左鍵採集（非建造時）"
+	if OS.has_feature("web") or DisplayServer.is_touchscreen_available():
+		t += "｜網頁／手機：點畫面中上區域可走路徑；右上快捷鍵＝採集／門／斧／裝／火／雙。"
+	hint_label.text = t
 
 
 func _toggle_hint_popup() -> void:
@@ -228,6 +301,9 @@ func _input(event: InputEvent) -> void:
 		elif event.physical_keycode == KEY_G:
 			try_use_near(player2, 1)
 
+
+func _unhandled_input(event: InputEvent) -> void:
+	## 滑鼠／觸控先給 UI（按鈕），未消化才處理世界區（避免 Web 上按不到底部面板）。
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
 		if not _mouse_in_world_interaction_band(mb.position):
@@ -238,18 +314,42 @@ func _input(event: InputEvent) -> void:
 				if mb.pressed:
 					player2.set_mouse_nav_target(get_global_mouse_position(), true)
 			elif mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-				if _try_handle_build_or_dismantle_click(get_global_mouse_position()):
-					pass
-				else:
+				if not _try_handle_build_or_dismantle_click(get_global_mouse_position()):
 					try_harvest_near(player2, 1)
 		else:
 			if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
 				if not _try_handle_build_or_dismantle_click(get_global_mouse_position()):
 					pass
+	elif not two_player:
+		_handle_p1_touch_navigation(event)
+
+
+func _screen_px_to_world_2d(screen_px: Vector2) -> Vector2:
+	return get_viewport().get_canvas_transform().affine_inverse() * screen_px
+
+
+func _handle_p1_touch_navigation(event: InputEvent) -> void:
+	if event is InputEventScreenTouch:
+		var st := event as InputEventScreenTouch
+		if st.pressed:
+			if not _mouse_in_world_interaction_band(st.position):
+				return
+			_p1_touch_idx = st.index
+			player1.set_touch_navigation(true, _screen_px_to_world_2d(st.position))
+		else:
+			if st.index == _p1_touch_idx:
+				_p1_touch_idx = -1
+				player1.set_touch_navigation(false)
+	elif event is InputEventScreenDrag:
+		var sd := event as InputEventScreenDrag
+		if sd.index == _p1_touch_idx and _p1_touch_idx != -1:
+			player1.set_touch_navigation(true, _screen_px_to_world_2d(sd.position))
 
 
 func _toggle_two_player() -> void:
 	two_player = not two_player
+	_p1_touch_idx = -1
+	player1.set_touch_navigation(false)
 	player2.visible = two_player
 	player2.process_mode = Node.PROCESS_MODE_INHERIT if two_player else Node.PROCESS_MODE_DISABLED
 	player2.velocity = Vector2.ZERO
@@ -258,8 +358,12 @@ func _toggle_two_player() -> void:
 	p2_mouse_right_down = false
 	if two_player:
 		player2.global_position = player1.global_position + Vector2(48, 32)
+		if _mobile_touch_bar:
+			_mobile_touch_bar.visible = false
 		_show_msg("雙人：1P WASD + F 採集、G 互動門；2P 方向鍵／右鍵移動，E 採集、G 互動門，左鍵採集（非建造模式時）。")
 	else:
+		if _mobile_touch_bar:
+			_mobile_touch_bar.visible = true
 		_show_msg("單人模式。")
 
 

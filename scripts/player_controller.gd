@@ -5,6 +5,9 @@ extends CharacterBody2D
 @export var player_index: int = 0
 var mouse_target: Vector2 = Vector2.ZERO
 var use_mouse_target: bool = false
+## 單人 Web／手機：指尖導航目標（鍵盤 WASD 會取消）。
+var touch_nav_active: bool = false
+var touch_nav_target: Vector2 = Vector2.ZERO
 var _sprite: Sprite2D
 
 
@@ -28,6 +31,12 @@ func _physics_process(_delta: float) -> void:
 	if player_index == 0:
 		dir.x = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
 		dir.y = float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W))
+		if dir.length_squared() > 0.0001:
+			touch_nav_active = false
+		elif touch_nav_active:
+			var to_t := touch_nav_target - global_position
+			if to_t.length() > 14.0:
+				dir = to_t.normalized()
 	else:
 		if use_mouse_target and mouse_target != Vector2.ZERO:
 			var to_tgt := mouse_target - global_position
@@ -46,6 +55,12 @@ func _physics_process(_delta: float) -> void:
 func set_mouse_nav_target(world: Vector2, active: bool) -> void:
 	mouse_target = world
 	use_mouse_target = active
+
+
+func set_touch_navigation(active: bool, world_pos: Vector2 = Vector2.ZERO) -> void:
+	touch_nav_active = active
+	if active:
+		touch_nav_target = world_pos
 
 
 func _draw() -> void:
