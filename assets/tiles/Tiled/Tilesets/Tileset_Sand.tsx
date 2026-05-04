@@ -3059,4 +3059,28 @@
    <wangtile tileid="2741" wangid="5,5,5,5,5,5,5,5"/>
   </wangset>
  </wangsets>
+ <!-- 補充 tile 定義：Map00 2f 圖層使用了這些 atlas 座標，
+      但原 TSX 無對應 <tile> 項目，導致 YATI 匯入時不建立 atlas 槽。 -->
+ <tile id="1"/>
+ <tile id="2"/>
+ <tile id="3"/>
+ <tile id="49"/>
+ <tile id="50"/>
+ <tile id="51"/>
+ <tile id="97"/>
+ <tile id="98"/>
+ <tile id="99"/>
+ <tile id="192"/>
+ <tile id="193"/>
+ <tile id="240"/>
+ <tile id="241"/>
+ <tile id="384"/>
+ <tile id="385"/>
+ <tile id="386"/>
+ <tile id="387"/>
+ <tile id="388"/>
+ <tile id="389"/>
+ <tile id="432"/>
+ <tile id="433"/>
+ <tile id="434"/>
 </tileset>

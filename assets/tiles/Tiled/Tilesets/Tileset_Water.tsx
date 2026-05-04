@@ -878,4 +878,32 @@
    <wangtile tileid="291" wangid="1,0,0,0,0,0,1,1"/>
   </wangset>
  </wangsets>
+ <!-- 以下為補充 tile 定義：Map00 water 圖層使用了這些 atlas 座標，
+      但原 TSX 無對應 <tile> 項目，導致 YATI 匯入時不建立 atlas 槽，
+      Godot 內該位置的磁磚顯示為透明（水域消失）。
+      補空的 <tile/> 讓 YATI 在 TileSetAtlasSource 建立對應條目。
+      無 objectgroup（不產生物理碰撞），無 animation（靜態顯示）。 -->
+ <tile id="7"/>
+ <tile id="8"/>
+ <tile id="9"/>
+ <tile id="11"/>
+ <tile id="31"/>
+ <tile id="32"/>
+ <tile id="33"/>
+ <tile id="56"/>
+ <tile id="57"/>
+ <tile id="102"/>
+ <tile id="103"/>
+ <tile id="126"/>
+ <tile id="127"/>
+ <tile id="154"/>
+ <tile id="249"/>
+ <tile id="251"/>
+ <tile id="272"/>
+ <tile id="273"/>
+ <tile id="274"/>
+ <tile id="275"/>
+ <tile id="294"/>
+ <tile id="296"/>
+ <tile id="297"/>
 </tileset>

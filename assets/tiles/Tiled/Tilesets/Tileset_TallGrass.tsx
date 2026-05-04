@@ -1175,4 +1175,11 @@
    <wangtile tileid="299" wangid="5,5,5,5,5,5,5,5"/>
   </wangset>
  </wangsets>
+ <!-- 補充 tile 定義：Map00 onground 圖層使用了這些 atlas 座標，
+      但原 TSX 無對應 <tile> 項目，導致 YATI 匯入時不建立 atlas 槽。 -->
+ <tile id="199"/>
+ <tile id="200"/>
+ <tile id="241"/>
+ <tile id="242"/>
+ <tile id="254"/>
 </tileset>

@@ -811,9 +811,13 @@ func _spawn_wild_props_for_region(c: Vector2i, sz: Vector2) -> void:
 			pass
 
 
-## Tiled 層序：ground → 2f（沙／高架）→ onground → water。2f 與水面重疊時必須讓 water 的 z_index 明顯較高，否則會看到沙色／草色蓋住水面。
+## Tiled 層序：全部層都要在玩家（z=0）之下，用負值確保不蓋角色。
+## 層間視覺順序靠節點順序維持（ground → 2f → onground → water 由先到後）。
+## 注意：z_as_relative=true 時，有效 z = 父節點有效 z + 自身 z_index。
+## map_root 在 DayNightModulate 內，WorldYSort 之前；
+## 若用正 z_index，會蓋過 WorldYSort 內玩家（z=0），故全部設負值。
 func _apply_tiled_map_layer_z_order(root: Node) -> void:
-	var order: Dictionary = {"ground": 0, "2f": 2, "onground": 4, "water": 50}
+	var order: Dictionary = {"ground": -4, "2f": -3, "onground": -2, "water": -1}
 	for c in root.get_children():
 		if c is TileMapLayer:
 			var nm := String(c.name).to_lower()
