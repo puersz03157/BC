@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="gemG" cx="38%" cy="32%" r="62%">
+      <stop offset="0%" stop-color="#f8e060"/>
+      <stop offset="100%" stop-color="#a07010"/>
+    </radialGradient>
+    <radialGradient id="ringG" cx="40%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#e8c040"/>
+      <stop offset="100%" stop-color="#7a5010"/>
+    </radialGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="29" rx="8" ry="2" fill="black" opacity="0.14"/>
+  <!-- Ring band -->
+  <circle cx="16" cy="18" r="9" fill="none" stroke="url(#ringG)" stroke-width="3.5"/>
+  <!-- Ring highlight arc -->
+  <path d="M9 13 Q10 8 16 8 Q22 8 23 13"
+        fill="none" stroke="white" stroke-width="1.2" opacity="0.35" stroke-linecap="round"/>
+  <!-- Gem setting base -->
+  <polygon points="16,4 20,8 16,12 12,8"
+           fill="#3a2808" stroke="#7a5010" stroke-width="1"/>
+  <!-- Gem facets -->
+  <polygon points="16,5 19.5,8 16,11 12.5,8"
+           fill="url(#gemG)" stroke="#a07010" stroke-width="0.7"/>
+  <line x1="16" y1="5"  x2="16" y2="11" stroke="white" stroke-width="0.7" opacity="0.35"/>
+  <line x1="12.5" y1="8" x2="19.5" y2="8" stroke="white" stroke-width="0.7" opacity="0.35"/>
+  <!-- Gem shine -->
+  <polygon points="14,6 15.5,7.5 13.5,8" fill="white" opacity="0.45"/>
+</svg>

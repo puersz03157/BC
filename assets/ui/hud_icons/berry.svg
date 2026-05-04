@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="bg1" cx="35%" cy="28%" r="65%">
+      <stop offset="0%" stop-color="#f07090"/>
+      <stop offset="100%" stop-color="#7a1028"/>
+    </radialGradient>
+    <radialGradient id="bg2" cx="35%" cy="28%" r="65%">
+      <stop offset="0%" stop-color="#d85878"/>
+      <stop offset="100%" stop-color="#600818"/>
+    </radialGradient>
+  </defs>
+  <!-- Stems -->
+  <path d="M12 17 Q11 11 14 7" stroke="#2d5a14" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  <path d="M21 16 Q22 10 18 7" stroke="#2d5a14" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  <!-- Leaves at junction -->
+  <path d="M16 7 Q13 3 10 5 Q12 8 16 7Z" fill="#4ea82a" stroke="#2a5014" stroke-width="0.9"/>
+  <path d="M16 7 Q19 3 22 5 Q20 8 16 7Z" fill="#42942a" stroke="#2a5014" stroke-width="0.9"/>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="28" rx="11" ry="2.5" fill="black" opacity="0.16"/>
+  <!-- Left berry -->
+  <circle cx="11" cy="21" r="6.5" fill="url(#bg1)" stroke="#5a0818" stroke-width="1.2"/>
+  <!-- Right berry -->
+  <circle cx="21" cy="20" r="6.5" fill="url(#bg2)" stroke="#5a0818" stroke-width="1.2"/>
+  <!-- Shine dots -->
+  <circle cx="9" cy="19" r="2" fill="white" opacity="0.48"/>
+  <circle cx="19" cy="18" r="2" fill="white" opacity="0.48"/>
+</svg>

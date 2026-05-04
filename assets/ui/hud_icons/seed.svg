@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="sdg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#90e050"/>
+      <stop offset="100%" stop-color="#3a7018"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="28" rx="7" ry="2" fill="black" opacity="0.16"/>
+  <!-- Seed / leaf body -->
+  <path d="M16 27 Q5 19 7 10 Q9 3 16 3 Q23 3 25 10 Q27 19 16 27Z"
+        fill="url(#sdg)" stroke="#285010" stroke-width="1.3"/>
+  <!-- Central vein -->
+  <line x1="16" y1="25" x2="16" y2="4.5" stroke="#285010" stroke-width="1.1" opacity="0.5"/>
+  <!-- Side veins -->
+  <path d="M16 11 Q12 9 10 11" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <path d="M16 11 Q20 9 22 11" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <path d="M16 16 Q11 14 9 16" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <path d="M16 16 Q21 14 23 16" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <path d="M16 21 Q13 19 11 21" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <path d="M16 21 Q19 19 21 21" stroke="#285010" stroke-width="0.9" fill="none" opacity="0.5"/>
+  <!-- Top highlight -->
+  <path d="M13 7 Q15 4 19 6 Q18 10 13 7Z" fill="white" opacity="0.28"/>
+</svg>

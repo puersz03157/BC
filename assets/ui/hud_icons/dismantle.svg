@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6a2818"/>
+      <stop offset="100%" stop-color="#2e1008"/>
+    </radialGradient>
+    <linearGradient id="wrench" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c0c8d4"/>
+      <stop offset="100%" stop-color="#606870"/>
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="13" fill="url(#bg)" stroke="#8a2818" stroke-width="1.5"/>
+  <!-- Wrench body (diagonal top-left → bottom-right) -->
+  <rect x="9" y="14" width="14" height="4" rx="2"
+        fill="url(#wrench)" stroke="#38424a" stroke-width="1"
+        transform="rotate(45 16 16)"/>
+  <!-- Wrench head top -->
+  <path d="M7 7 Q5 5 5 8 Q5 11 8 11 L11 8 Z"
+        fill="url(#wrench)" stroke="#38424a" stroke-width="1"/>
+  <!-- Wrench head bottom -->
+  <path d="M25 25 Q27 27 27 24 Q27 21 24 21 L21 24 Z"
+        fill="url(#wrench)" stroke="#38424a" stroke-width="1"/>
+  <!-- Wrench highlight -->
+  <rect x="14" y="14.5" width="4" height="1.5" rx="0.5"
+        fill="white" opacity="0.3"
+        transform="rotate(45 16 15.5)"/>
+  <!-- Small X / spark accent -->
+  <line x1="19" y1="9"  x2="22" y2="6"  stroke="#f0a020" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+  <line x1="22" y1="9"  x2="19" y2="6"  stroke="#f0a020" stroke-width="1.5" stroke-linecap="round" opacity="0.85"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="boltG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8f040"/>
+      <stop offset="100%" stop-color="#e08010"/>
+    </linearGradient>
+    <radialGradient id="glowG" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f8e040" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#f8e040" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Background glow -->
+  <ellipse cx="17" cy="16" rx="12" ry="12" fill="url(#glowG)"/>
+  <!-- Speed trail lines (fading left) -->
+  <line x1="3"  y1="12" x2="13" y2="12" stroke="#f0c030" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <line x1="2"  y1="16" x2="11" y2="16" stroke="#f0c030" stroke-width="2"   stroke-linecap="round" opacity="0.5"/>
+  <line x1="3"  y1="20" x2="13" y2="20" stroke="#f0c030" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+  <!-- Lightning bolt -->
+  <path d="M22 3 L13 16 L18 16 L10 29 L25 14 L19 14 Z"
+        fill="url(#boltG)" stroke="#a05808" stroke-width="1.1"/>
+  <!-- Bolt inner highlight -->
+  <path d="M21 5 L14 16 L18 16 L12 27 L16 16 L20.5 16 Z"
+        fill="white" opacity="0.22"/>
+</svg>

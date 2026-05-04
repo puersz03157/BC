@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="blade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#dce8f4"/>
+      <stop offset="50%" stop-color="#8aa0b4"/>
+      <stop offset="100%" stop-color="#485868"/>
+    </linearGradient>
+    <linearGradient id="grip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5a3820"/>
+      <stop offset="100%" stop-color="#2c1a0c"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="29" rx="10" ry="2" fill="black" opacity="0.14"/>
+  <!-- Blade (top-right to bottom-left diagonal) -->
+  <path d="M24 4 L28 7 L11 26 L7 25 Z"
+        fill="url(#blade)" stroke="#38485a" stroke-width="1.1"/>
+  <!-- Blade centre shine -->
+  <line x1="25" y1="6" x2="10" y2="25" stroke="white" stroke-width="1" opacity="0.35" stroke-linecap="round"/>
+  <!-- Cross-guard -->
+  <rect x="13" y="19" width="12" height="3.5" rx="1.8"
+        fill="#7a6030" stroke="#3a2818" stroke-width="0.9"
+        transform="rotate(38 19 20.5)"/>
+  <!-- Grip -->
+  <rect x="5" y="22" width="3.5" height="9" rx="1.8"
+        fill="url(#grip)" stroke="#2c1a0c" stroke-width="0.9"
+        transform="rotate(38 6.5 26)"/>
+  <!-- Pommel -->
+  <circle cx="4.5" cy="28.5" r="2.2"
+          fill="#9a8030" stroke="#3a2818" stroke-width="0.9"
+          transform="rotate(38 4.5 28.5)"/>
+</svg>

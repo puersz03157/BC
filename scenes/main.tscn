@@ -7,20 +7,22 @@
 [node name="Main" type="Node2D" unique_id=707544429]
 script = ExtResource("1_main")
 
-[node name="Backdrop" type="Node2D" parent="." unique_id=1655132366]
+[node name="DayNightModulate" type="CanvasModulate" parent="." unique_id=707544430]
+
+[node name="Backdrop" type="Node2D" parent="DayNightModulate" unique_id=1655132366]
 script = ExtResource("3_backdrop")
 
-[node name="Bounds" type="Node2D" parent="." unique_id=1087203534]
+[node name="Bounds" type="Node2D" parent="DayNightModulate" unique_id=1087203534]
 
-[node name="WorldYSort" type="Node2D" parent="." unique_id=477823185]
+[node name="WorldYSort" type="Node2D" parent="DayNightModulate" unique_id=477823185]
 y_sort_enabled = true
 
-[node name="Entities" type="Node2D" parent="WorldYSort" unique_id=1884658657]
+[node name="Entities" type="Node2D" parent="DayNightModulate/WorldYSort" unique_id=1884658657]
 
-[node name="Player1" parent="WorldYSort" unique_id=1080575537 instance=ExtResource("2_player")]
+[node name="Player1" parent="DayNightModulate/WorldYSort" unique_id=1080575537 instance=ExtResource("2_player")]
 position = Vector2(640, 360)
 
-[node name="Player2" parent="WorldYSort" unique_id=1740227473 instance=ExtResource("2_player")]
+[node name="Player2" parent="DayNightModulate/WorldYSort" unique_id=1740227473 instance=ExtResource("2_player")]
 position = Vector2(688, 360)
 player_index = 1
 
@@ -38,21 +40,116 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="QuestPanel" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1210688142]
-layout_mode = 0
-offset_left = 16.0
+[node name="LeftVitalsPanel" type="PanelContainer" parent="CanvasLayer/UI" unique_id=2104496096]
+layout_mode = 1
+offset_left = 12.0
 offset_top = 8.0
-offset_right = 1264.0
-offset_bottom = 76.0
+offset_right = 332.0
+offset_bottom = 124.0
+grow_horizontal = 0
+grow_vertical = 0
 
-[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/QuestPanel" unique_id=308873516]
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/LeftVitalsPanel" unique_id=825471388]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="VitalsMainHBox" type="HBoxContainer" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer" unique_id=79754814]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BarsVBox" type="VBoxContainer" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox" unique_id=196654033]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="RegionInfoLabel" type="Label" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox" unique_id=2036261607]
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "初始之地  (0,0)"
+
+[node name="HpRow" type="HBoxContainer" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox" unique_id=1523999818]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HpLabel" type="Label" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox/HpRow" unique_id=695526816]
+custom_minimum_size = Vector2(52, 0)
+layout_mode = 2
+text = "生命"
+vertical_alignment = 1
+
+[node name="HpBar" type="ProgressBar" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox/HpRow" unique_id=383064771]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+value = 100.0
+show_percentage = false
+
+[node name="HungerRow" type="HBoxContainer" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox" unique_id=1601415260]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="HungerLabel" type="Label" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox/HungerRow" unique_id=1293167240]
+custom_minimum_size = Vector2(52, 0)
+layout_mode = 2
+tooltip_text = "條越長越飽；移動／採集／攻擊／技能會消耗飽足，見底表示極餓。"
+text = "飽食度"
+vertical_alignment = 1
+
+[node name="HungerBar" type="ProgressBar" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/BarsVBox/HungerRow" unique_id=149937145]
+custom_minimum_size = Vector2(0, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "飽足會因行為消耗；吃莓果、莓果干、肉排或烤肉可恢復。"
+value = 100.0
+show_percentage = false
+
+[node name="DateTimeVBox" type="VBoxContainer" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox" unique_id=1712821810]
+custom_minimum_size = Vector2(78, 0)
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="GameDateLabel" type="Label" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/DateTimeVBox" unique_id=1839671631]
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "1/1"
+horizontal_alignment = 2
+
+[node name="RealTimeLabel" type="Label" parent="CanvasLayer/UI/LeftVitalsPanel/MarginContainer/VitalsMainHBox/DateTimeVBox" unique_id=1357303096]
+layout_mode = 2
+tooltip_text = "遊戲內時間（與日夜循環同步）。"
+theme_override_font_sizes/font_size = 12
+text = "00:00"
+horizontal_alignment = 2
+
+[node name="RightHudColumn" type="VBoxContainer" parent="CanvasLayer/UI" unique_id=2031479839]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -334.0
+offset_top = 8.0
+offset_right = -74.0
+offset_bottom = 156.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 0
+theme_override_constants/separation = 8
+
+[node name="QuestPanel" type="PanelContainer" parent="CanvasLayer/UI/RightHudColumn" unique_id=1210688142]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/RightHudColumn/QuestPanel" unique_id=308873516]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 8
 
-[node name="QuestText" type="RichTextLabel" parent="CanvasLayer/UI/QuestPanel/MarginContainer" unique_id=2100960326]
+[node name="QuestText" type="RichTextLabel" parent="CanvasLayer/UI/RightHudColumn/QuestPanel/MarginContainer" unique_id=2100960326]
 layout_mode = 2
 bbcode_enabled = true
 text = "載入..."
@@ -60,21 +157,105 @@ fit_content = true
 scroll_active = false
 autowrap_mode = 2
 
-[node name="HintHelpBtn" type="Button" parent="CanvasLayer/UI" unique_id=997138738]
+[node name="TopRightStack" type="VBoxContainer" parent="CanvasLayer/UI" unique_id=997822038]
 layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -48.0
-offset_top = 8.0
-offset_right = -12.0
-offset_bottom = 44.0
+offset_left = -65.0
+offset_top = 20.0
+offset_right = -13.0
+offset_bottom = 180.0
 grow_horizontal = 0
-grow_vertical = 0
+mouse_filter = 0
+theme_override_constants/separation = 4
+
+[node name="SettingsBtn" type="Button" parent="CanvasLayer/UI/TopRightStack" unique_id=1466656336]
+custom_minimum_size = Vector2(40, 36)
+layout_mode = 2
+focus_mode = 0
+theme_override_font_sizes/font_size = 18
+text = "⚙"
+flat = true
+
+[node name="StylingBtn" type="Button" parent="CanvasLayer/UI/TopRightStack" unique_id=1466656337]
+custom_minimum_size = Vector2(48, 36)
+layout_mode = 2
+tooltip_text = "角色膚色、性別、髮型與上衣"
+focus_mode = 0
+theme_override_font_sizes/font_size = 11
+text = "造型"
+flat = true
+
+[node name="HintHelpBtn" type="Button" parent="CanvasLayer/UI/TopRightStack" unique_id=997138738]
+custom_minimum_size = Vector2(40, 36)
+layout_mode = 2
 focus_mode = 0
 theme_override_font_sizes/font_size = 18
 text = "?"
 flat = true
+
+[node name="QuestLogBtn" type="Button" parent="CanvasLayer/UI/TopRightStack" unique_id=2100555001]
+custom_minimum_size = Vector2(48, 36)
+layout_mode = 2
+tooltip_text = "查看已完成的主線任務"
+focus_mode = 0
+theme_override_font_sizes/font_size = 11
+text = "任務"
+flat = true
+
+[node name="DismantleBtn" type="Button" parent="CanvasLayer/UI/TopRightStack" unique_id=145250055]
+custom_minimum_size = Vector2(52, 40)
+layout_mode = 2
+tooltip_text = "拆除模式：左鍵點建造物、營火或樹苗以回收資源。"
+focus_mode = 0
+theme_override_font_sizes/font_size = 9
+text = "拆除回收"
+flat = true
+
+[node name="SettingsPopup" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1948960294]
+visible = false
+z_index = 20
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -280.0
+offset_right = 220.0
+offset_bottom = 280.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/SettingsPopup" unique_id=1636978979]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="SettingsVBox" type="VBoxContainer" parent="CanvasLayer/UI/SettingsPopup/MarginContainer" unique_id=855626656]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="SettingsTitle" type="Label" parent="CanvasLayer/UI/SettingsPopup/MarginContainer/SettingsVBox" unique_id=1512063263]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "設定"
+
+[node name="BtnManualSave" type="Button" parent="CanvasLayer/UI/SettingsPopup/MarginContainer/SettingsVBox" unique_id=760785677]
+layout_mode = 2
+text = "手動存檔"
+
+[node name="BtnReset" type="Button" parent="CanvasLayer/UI/SettingsPopup/MarginContainer/SettingsVBox" unique_id=1367112720]
+layout_mode = 2
+text = "進度初始化"
+
+[node name="BtnClose" type="Button" parent="CanvasLayer/UI/SettingsPopup/MarginContainer/SettingsVBox" unique_id=7651302]
+layout_mode = 2
+text = "關閉"
 
 [node name="HintPopup" type="PanelContainer" parent="CanvasLayer/UI" unique_id=1662609111]
 visible = false
@@ -96,6 +277,49 @@ layout_mode = 2
 theme_override_font_sizes/font_size = 13
 autowrap_mode = 2
 
+[node name="QuestLogPopup" type="PanelContainer" parent="CanvasLayer/UI" unique_id=2100555002]
+visible = false
+z_index = 20
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -260.0
+offset_right = 220.0
+offset_bottom = 260.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="CanvasLayer/UI/QuestLogPopup" unique_id=2100555003]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="CanvasLayer/UI/QuestLogPopup/MarginContainer" unique_id=2100555004]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="CanvasLayer/UI/QuestLogPopup/MarginContainer/VBox" unique_id=2100555005]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "已完成任務"
+
+[node name="QuestLogText" type="RichTextLabel" parent="CanvasLayer/UI/QuestLogPopup/MarginContainer/VBox" unique_id=2100555006]
+custom_minimum_size = Vector2(0, 240)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+autowrap_mode = 2
+
+[node name="BtnQuestLogClose" type="Button" parent="CanvasLayer/UI/QuestLogPopup/MarginContainer/VBox" unique_id=2100555007]
+layout_mode = 2
+text = "關閉"
+
 [node name="InvBar" type="PanelContainer" parent="CanvasLayer/UI" unique_id=681791824]
 layout_mode = 1
 anchors_preset = 12
@@ -103,7 +327,7 @@ anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 10.0
-offset_top = -220.0
+offset_top = -300.0
 offset_right = -10.0
 offset_bottom = -8.0
 grow_horizontal = 2

@@ -1,0 +1,14 @@
+Each spritesheet have the same order. 
+Right side is for mirroring to make the left. 
+Animations are exported in rows (horizontal <3)
+
+Animations order:
+
+1. First 3 rows is IDLE
+2. Next 3 rows is WALK
+3. Next 3 rows is MINING
+4. Next 3 is SWING (for this animation there is a separate spritesheets with weapons/tools)
+5. Next is PICKING UP (items e.g.)
+6. Walking while holding
+7. Interacting
+8. Watering (watering can is a separate spritesheet)

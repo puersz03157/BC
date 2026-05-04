@@ -1,0 +1,23 @@
+[remap]
+
+importer="YATI"
+type="PackedScene"
+uid="uid://c5o778l4k3uxq"
+path="res://.godot/imported/Mage Tower.tmx-1367715e24f16375b4971d817598840e.tscn"
+
+[deps]
+
+source_file="res://assets/tiles/Tiled/Tilemaps/Mage Tower.tmx"
+dest_files=["res://.godot/imported/Mage Tower.tmx-1367715e24f16375b4971d817598840e.tscn"]
+
+[params]
+
+use_default_filter=false
+add_class_as_metadata=false
+add_id_as_metadata=false
+no_alternative_tiles=false
+map_wangset_to_terrain=false
+custom_data_prefix="data_"
+tiled_project_file=""
+post_processor=""
+save_tileset_to=""

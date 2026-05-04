@@ -1,0 +1,2 @@
+Grid Size for Sword 
+54 x 58 (horizontal x vertical)

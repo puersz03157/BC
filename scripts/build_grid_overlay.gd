@@ -41,5 +41,7 @@ func _draw() -> void:
 		draw_line(Vector2(x0, gy), Vector2(x1, gy), grid_color, 1.0)
 		gy += g
 	var half_prev := preview_size * 0.5
-	draw_rect(Rect2(preview_center - half_prev, preview_size), preview_fill, true)
-	draw_rect(Rect2(preview_center - half_prev, preview_size), preview_outline, false, 2.0)
+	## preview_size 為 (0,0) 時不畫預覽格（例如營火放置：避免與營火疊成方框）。
+	if preview_size.length_squared() > 1.0:
+		draw_rect(Rect2(preview_center - half_prev, preview_size), preview_fill, true)
+		draw_rect(Rect2(preview_center - half_prev, preview_size), preview_outline, false, 2.0)

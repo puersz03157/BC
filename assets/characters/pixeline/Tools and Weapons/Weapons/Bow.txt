@@ -1,0 +1,25 @@
+---------------------
+
+Order of Rows:
+
+Quiver:
+
+Front
+Back
+Side
+
+Bow:
+
+Front 
+Back
+Side
+
+---------------------
+
+For front quiver should be behind the character
+For back quiver should be above the character
+For side quiver should be behind the character
+
+For front bow should be above the character
+For back bow should be below/behind the character
+For side quiver should be above the character

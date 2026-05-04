@@ -3,3 +3,9 @@
 
 # Local export zip (optional)
 DIST.zip
+
+# Claude Code local workspace
+.claude/
+
+# Tiled session (local editor state)
+assets/maps/*.tiled-session

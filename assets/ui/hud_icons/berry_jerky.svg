@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="jkg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c86840"/>
+      <stop offset="100%" stop-color="#6a2c10"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="28" rx="10" ry="2" fill="black" opacity="0.15"/>
+  <!-- Top strip (angled) -->
+  <rect x="7" y="7" width="18" height="5" rx="2.5" fill="url(#jkg)" stroke="#3d1808" stroke-width="1.1"
+        transform="rotate(-8 16 9.5)"/>
+  <!-- Middle strip -->
+  <rect x="7" y="14" width="18" height="5" rx="2.5" fill="url(#jkg)" stroke="#3d1808" stroke-width="1.1"/>
+  <!-- Bottom strip (angled) -->
+  <rect x="7" y="21" width="18" height="5" rx="2.5" fill="url(#jkg)" stroke="#3d1808" stroke-width="1.1"
+        transform="rotate(8 16 23.5)"/>
+  <!-- Grain lines on middle strip -->
+  <line x1="12" y1="14.5" x2="12" y2="18.5" stroke="#3d1808" stroke-width="0.8" opacity="0.45"/>
+  <line x1="17" y1="14.5" x2="17" y2="18.5" stroke="#3d1808" stroke-width="0.8" opacity="0.45"/>
+  <line x1="22" y1="14.5" x2="22" y2="18.5" stroke="#3d1808" stroke-width="0.8" opacity="0.45"/>
+  <!-- Berry accent (top right) -->
+  <circle cx="24" cy="8" r="4" fill="#c83050" stroke="#601020" stroke-width="1"/>
+  <circle cx="22.5" cy="6.5" r="1.3" fill="white" opacity="0.45"/>
+</svg>

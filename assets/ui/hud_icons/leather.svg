@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <radialGradient id="hideG" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#c8904a"/>
+      <stop offset="100%" stop-color="#6a3e18"/>
+    </radialGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="29" rx="11" ry="2" fill="black" opacity="0.15"/>
+  <!-- Hide / pelt shape (irregular, like a stretched animal hide) -->
+  <path d="M8 6 Q5 4 4 8 Q3 13 6 15 Q4 18 5 22 Q6 27 10 27 Q14 29 16 27 Q18 29 22 27 Q26 27 27 22 Q28 18 26 15 Q29 13 28 8 Q27 4 24 6 Q22 3 19 5 Q17 3 16 4 Q15 3 13 5 Q10 3 8 6Z"
+        fill="url(#hideG)" stroke="#3e2010" stroke-width="1.2"/>
+  <!-- Hide texture stitching lines -->
+  <path d="M16 5 Q16 14 16 26" stroke="#3e2010" stroke-width="0.8" fill="none" opacity="0.4"/>
+  <path d="M10 8 Q13 14 10 22" stroke="#3e2010" stroke-width="0.7" fill="none" opacity="0.35"/>
+  <path d="M22 8 Q19 14 22 22" stroke="#3e2010" stroke-width="0.7" fill="none" opacity="0.35"/>
+  <!-- Highlight -->
+  <ellipse cx="13" cy="11" rx="4" ry="3" fill="white" opacity="0.2"/>
+</svg>

@@ -4,13 +4,18 @@ enum PropKind { TREE, ROCK }
 
 @export var prop_kind: PropKind = PropKind.TREE
 var hit_points: int = 1
+## 讀檔還原用：在加入場景樹前設為 >=0 則覆寫預設血量。
+var _restore_hit_points: int = -1
 var _sprite: Sprite2D
 
 
 func _ready() -> void:
 	collision_layer = 1
 	collision_mask = 0
-	if prop_kind == PropKind.TREE:
+	if _restore_hit_points >= 0:
+		hit_points = _restore_hit_points
+		_restore_hit_points = -1
+	elif prop_kind == PropKind.TREE:
 		hit_points = GameConstants.TREE_HP
 	else:
 		hit_points = GameConstants.ROCK_HP

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="hnd" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c88a40"/>
+      <stop offset="100%" stop-color="#6a3c14"/>
+    </linearGradient>
+    <linearGradient id="hd" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c0ccd8"/>
+      <stop offset="100%" stop-color="#505a68"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="29" rx="9" ry="2" fill="black" opacity="0.16"/>
+  <!-- Handle -->
+  <rect x="14.5" y="9" width="4" height="19" rx="2" fill="url(#hnd)" stroke="#3d2010" stroke-width="1.1"/>
+  <!-- Handle highlight -->
+  <rect x="15.5" y="10" width="1.5" height="13" rx="1" fill="white" opacity="0.2"/>
+  <!-- Binding wrap -->
+  <rect x="13.5" y="13" width="6" height="2.5" rx="0.8" fill="#3d2010" opacity="0.75"/>
+  <!-- Stone axe head -->
+  <path d="M17 10 L27 5 L29 14 L20 18 L17 14 Z"
+        fill="url(#hd)" stroke="#383f4a" stroke-width="1.2"/>
+  <!-- Head highlight -->
+  <path d="M18 10 L25 6.5 L27 11 L20 13.5 Z" fill="white" opacity="0.22"/>
+  <!-- Sharp edge glint -->
+  <line x1="27" y1="5" x2="29" y2="14" stroke="#dce8f0" stroke-width="1.5" opacity="0.65" stroke-linecap="round"/>
+</svg>

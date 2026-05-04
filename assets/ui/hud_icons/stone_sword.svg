@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="sblade" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c0c4cc"/>
+      <stop offset="50%" stop-color="#7a8090"/>
+      <stop offset="100%" stop-color="#40454e"/>
+    </linearGradient>
+    <linearGradient id="sgrip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6a4428"/>
+      <stop offset="100%" stop-color="#301a0a"/>
+    </linearGradient>
+  </defs>
+  <!-- Shadow -->
+  <ellipse cx="16" cy="29" rx="10" ry="2" fill="black" opacity="0.14"/>
+  <!-- Blade — rough/chipped edges for stone look -->
+  <path d="M23 4 L27 8 L25 11 L27 14 L10 26 L6 25 Z"
+        fill="url(#sblade)" stroke="#363840" stroke-width="1.1"/>
+  <!-- Chip marks -->
+  <path d="M21 7 L23 9" stroke="#363840" stroke-width="0.9" opacity="0.5"/>
+  <path d="M18 11 L20 13" stroke="#363840" stroke-width="0.9" opacity="0.5"/>
+  <!-- Blade highlight -->
+  <line x1="24" y1="6" x2="9" y2="24" stroke="white" stroke-width="0.9" opacity="0.25" stroke-linecap="round"/>
+  <!-- Cross-guard (rougher, stone-bound) -->
+  <rect x="12" y="19" width="11" height="3.5" rx="1"
+        fill="#6a5030" stroke="#352818" stroke-width="0.9"
+        transform="rotate(38 17.5 20.5)"/>
+  <!-- Grip -->
+  <rect x="4" y="22" width="3.5" height="9" rx="1.5"
+        fill="url(#sgrip)" stroke="#301a0a" stroke-width="0.9"
+        transform="rotate(38 5.5 26)"/>
+  <!-- Pommel (stone, faceted) -->
+  <path d="M3 29 L5 26 L7 28 L5 31 Z"
+        fill="#8a8890" stroke="#363840" stroke-width="0.8"
+        transform="rotate(38 5 28.5)"/>
+</svg>

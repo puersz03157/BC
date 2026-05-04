@@ -1,12 +1,15 @@
 class_name WorldBuildPiece
 extends Node2D
-## 木地板（無碰撞，可行走）、木牆（實心方格）、木門（關閉擋人；F 互動開啟可通過）。
+## 木地板（無碰撞，可行走）、木牆（實心方格）、木門（關閉擋人；F 互動開啟可通過）、工作台、木箱。
 
-enum PieceKind { FLOOR, WALL, DOOR }
+enum PieceKind { FLOOR, WALL, DOOR, WORKBENCH, CHEST }
 
 const HALF := GameConstants.GRID_SIZE * 0.5
 
 @export var piece_kind: PieceKind = PieceKind.FLOOR
+
+## 僅 `PieceKind.CHEST` 使用；12 格／堆疊 30。
+var chest_storage: GameInventory = null
 
 var door_open: bool = false
 
@@ -30,6 +33,29 @@ func _ready() -> void:
 			add_to_group("interactive_door")
 			_build_door_art()
 			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+		PieceKind.WORKBENCH:
+			z_index = 1
+			add_to_group("workbench")
+			_build_workbench_art()
+			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+		PieceKind.CHEST:
+			z_index = 1
+			add_to_group("storage_chest")
+			_ensure_chest_storage()
+			_build_chest_art()
+			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+	if piece_kind == PieceKind.DOOR and door_open:
+		call_deferred(&"_apply_door_open_state")
+
+
+func _apply_door_open_state() -> void:
+	if piece_kind != PieceKind.DOOR:
+		return
+	if _collision:
+		_collision.set_deferred(&"disabled", true)
+	if _door_visual:
+		_door_visual.rotation_degrees = -88.0
+		_door_visual.modulate = Color(1.0, 1.0, 1.0, 0.42)
 
 
 func _add_solid_collision(w: float, h: float) -> void:
@@ -134,6 +160,61 @@ func _build_door_art() -> void:
 	_door_visual.add_child(ring)
 
 
+func _ensure_chest_storage() -> void:
+	if chest_storage != null:
+		return
+	chest_storage = GameInventory.new()
+	chest_storage.slot_count = GameConstants.CHEST_SLOT_COUNT
+	chest_storage.stack_limit = GameConstants.CHEST_STACK_LIMIT
+	chest_storage._ensure_slot_array()
+
+
+func _build_chest_art() -> void:
+	var box := Polygon2D.new()
+	box.polygon = _rect_poly(HALF - 2.0, HALF - 3.0)
+	box.color = Color(0.44, 0.30, 0.18, 1.0)
+	add_child(box)
+	var lid := Polygon2D.new()
+	lid.polygon = _rect_poly(HALF - 3.0, 6.0)
+	lid.position = Vector2(0.0, -HALF + 8.0)
+	lid.color = Color(0.52, 0.36, 0.22, 1.0)
+	add_child(lid)
+	var band := Line2D.new()
+	band.width = 2.0
+	band.default_color = Color(0.28, 0.20, 0.12, 1.0)
+	band.points = PackedVector2Array([Vector2(-HALF + 4, 2.0), Vector2(HALF - 4, 2.0)])
+	add_child(band)
+
+
+func _build_workbench_art() -> void:
+	## 一格內簡易木工台：檯面＋支架（與木牆色調接近）。
+	var top := Polygon2D.new()
+	top.polygon = _rect_poly(HALF - 2.0, 7.0)
+	top.position = Vector2(0.0, -HALF + 10.0)
+	top.color = Color(0.52, 0.36, 0.22, 1.0)
+	add_child(top)
+	var top_hi := Polygon2D.new()
+	top_hi.polygon = _rect_poly(HALF - 5.0, 2.5)
+	top_hi.position = Vector2(0.0, -HALF + 6.0)
+	top_hi.color = Color(0.62, 0.46, 0.3, 1.0)
+	add_child(top_hi)
+	for sx in [-11.0, 11.0]:
+		var leg := Polygon2D.new()
+		leg.polygon = PackedVector2Array([
+			Vector2(sx - 4.0, -HALF + 14.0), Vector2(sx + 4.0, -HALF + 14.0),
+			Vector2(sx + 3.0, HALF - 4.0), Vector2(sx - 3.0, HALF - 4.0),
+		])
+		leg.color = Color(0.4, 0.28, 0.18, 1.0)
+		add_child(leg)
+	var vice := Polygon2D.new()
+	vice.polygon = PackedVector2Array([
+		Vector2(-HALF + 8.0, -HALF + 4.0), Vector2(-HALF + 18.0, -HALF + 4.0),
+		Vector2(-HALF + 18.0, -HALF + 12.0), Vector2(-HALF + 8.0, -HALF + 12.0),
+	])
+	vice.color = Color(0.35, 0.38, 0.42, 1.0)
+	add_child(vice)
+
+
 func _circle_poly(center: Vector2, r: float, segments: int) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in range(segments + 1):
@@ -169,5 +250,17 @@ static func refund_wood_for_kind(k: PieceKind) -> int:
 			return GameConstants.BUILD_FENCE_WOOD
 		PieceKind.DOOR:
 			return GameConstants.BUILD_DOOR_WOOD
+		PieceKind.WORKBENCH:
+			return GameConstants.BUILD_WORKBENCH_WOOD
+		PieceKind.CHEST:
+			return GameConstants.BUILD_CHEST_WOOD
+		_:
+			return 0
+
+
+static func refund_stone_for_kind(k: PieceKind) -> int:
+	match k:
+		PieceKind.WORKBENCH:
+			return GameConstants.BUILD_WORKBENCH_STONE
 		_:
 			return 0

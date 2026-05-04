@@ -1,6 +1,6 @@
 class_name LoosePickup
 extends Area2D
-enum PickKind { WOOD, STONE, SEED }
+enum PickKind { WOOD, STONE, SEED, SLIME, LEATHER, MEAT_CUTLET, MUSHROOM }
 
 @export var pick_kind: PickKind = PickKind.WOOD
 var _sprite: Sprite2D
