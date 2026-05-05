@@ -62,6 +62,90 @@ const _BASENAME_ZH: Dictionary = {
 	"Base_character_Male_Steel_Armor_Legs": "鋼鐵護腿",
 }
 
+## Web／部分平台對 `res://` 目錄列舉不可靠；與 `_collect_png_sorted` 掃描結果合併，避免造型選單只剩「（無）」。
+## （Godot 不允許以巢狀 `PackedStringArray` 當 `const` 字典值，改為首次呼叫時建入 `static var`。）
+static var _pixeline_png_fallback_by_dir: Dictionary = {}
+static var _pixeline_png_fallback_built: bool = false
+
+
+static func _pixeline_png_fallback_dict() -> Dictionary:
+	if _pixeline_png_fallback_built:
+		return _pixeline_png_fallback_by_dir
+	_pixeline_png_fallback_by_dir = {
+		"res://assets/characters/pixeline/Hair Male": PackedStringArray([
+			"res://assets/characters/pixeline/Hair Male/Base_character_Male_Hair_Blonde_with_beard.png",
+			"res://assets/characters/pixeline/Hair Male/Base_character_Male_Long_Hair_Black_Unisex.png",
+			"res://assets/characters/pixeline/Hair Male/Base_character_Male_Old_Man_Hair_Elegant.png",
+			"res://assets/characters/pixeline/Hair Male/Base_character_Male_Short_Brown.png",
+			"res://assets/characters/pixeline/Hair Male/Base_character_Male_Short_Dark_Blonde.png",
+		]),
+		"res://assets/characters/pixeline/Hair Female": PackedStringArray([
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Bun_Peasant_Brown.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Gray_Bun.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Long_Blond_Glossy.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Long_Purple_witchy.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Long_Unisex_Black.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Queen_Crown_Bun.png",
+			"res://assets/characters/pixeline/Hair Female/Base_character_Female_Hair_Short_Pixie.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Male/Head": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Male/Head/Base_character_Male_Hat_Adventurer.png",
+			"res://assets/characters/pixeline/Clothes Male/Head/Base_character_Male_Hat_Wizard.png",
+			"res://assets/characters/pixeline/Clothes Male/Head/Base_character_Male_Helmet_Knight_Closed.png",
+			"res://assets/characters/pixeline/Clothes Male/Head/Base_character_Male_King_Crown.png",
+			"res://assets/characters/pixeline/Clothes Male/Head/Base_character_Male_Spooky_Pumpkin.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Female/Head": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Crown.png",
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Hat_Adventurer.png",
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Hat_Light_Brown_Turqoiuse.png",
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Hat_White_red.png",
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Hat_Witch.png",
+			"res://assets/characters/pixeline/Clothes Female/Head/Base_character_Female_Spooky_Pumpkin.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Male/Chest": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Cape_Black.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Cape_Green_Ranger.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Fur_Armor.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_King_Cloak.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Knight_Cape.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Shirt_Royal_Blue.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Shirt_Royal_Red.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Shirt_beige.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Shirt_with_Vest_RED_Elegant.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Shirt_with_Vest_brown.png",
+			"res://assets/characters/pixeline/Clothes Male/Chest/Base_character_Male_Steel_Armor_Chest.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Female/Chest": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Beige_Shirt_Adventurer.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Black_Cape.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Dress_Royal_Blue.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Fur_Armor_Chest.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Green_Ranger_Cape.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Peasant_Red_Shirt.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Peasant_White_Shirt.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Purple_Witch_Dress.png",
+			"res://assets/characters/pixeline/Clothes Female/Chest/Base_character_Female_Villager_Pink_Skirt.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Male/Pants": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Pants_Fur_Pants.png",
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Pants_Noble_Gold.png",
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Pants_Peasant.png",
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Pants_Villager.png",
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Pants_Villager_red.png",
+			"res://assets/characters/pixeline/Clothes Male/Pants/Base_character_Male_Steel_Armor_Legs.png",
+		]),
+		"res://assets/characters/pixeline/Clothes Female/Legs": PackedStringArray([
+			"res://assets/characters/pixeline/Clothes Female/Legs/Base_character_Female_Fur_Armor_Pants.png",
+			"res://assets/characters/pixeline/Clothes Female/Legs/Base_character_Female_Gold_Pants.png",
+			"res://assets/characters/pixeline/Clothes Female/Legs/Base_character_Female_Pants_Peasant.png",
+			"res://assets/characters/pixeline/Clothes Female/Legs/Base_character_Female_Pants_Villager.png",
+			"res://assets/characters/pixeline/Clothes Female/Legs/Base_character_Female_Peasant_Skirt_with_Apron.png",
+		]),
+	}
+	_pixeline_png_fallback_built = true
+	return _pixeline_png_fallback_by_dir
+
 
 static func skin_keys() -> Array[String]:
 	return ["medium", "pale", "tanned", "dark", "pinkish"]
@@ -114,7 +198,7 @@ static func base_body_path(gender_male: bool, skin_key: String) -> String:
 	return PIXELINE_DIR + fn
 
 
-## 開局免費解鎖（其餘須購買／劇情解鎖）；路徑須與掃描結果一致。
+## 開局免費解鎖；路徑須與掃描／後援清單一致。另見 `all_catalog_cosmetic_paths()`。
 static func starter_unlock_paths() -> PackedStringArray:
 	return PackedStringArray([
 		PIXELINE_DIR + "Hair Male/Base_character_Male_Short_Brown.png",
@@ -138,25 +222,36 @@ static func starter_unlock_paths() -> PackedStringArray:
 	])
 
 
-static func _collect_png_sorted(dir_res: String) -> Array[String]:
+## `_pixeline_png_fallback_dict()` 內全部路徑（供開局解鎖，與 Web 列舉無關）。
+static func all_catalog_cosmetic_paths() -> Array[String]:
 	var out: Array[String] = []
+	var fb_dict := _pixeline_png_fallback_dict()
+	for k in fb_dict.keys():
+		var fb: Variant = fb_dict[k]
+		if fb is PackedStringArray:
+			for p in fb as PackedStringArray:
+				out.append(p)
+	return out
+
+
+static func _collect_png_sorted(dir_res: String) -> Array[String]:
 	var base := dir_res.rstrip("/")
+	var seen: Dictionary = {}
 	var da := DirAccess.open(base)
-	if da == null:
-		return out
-	var err := da.list_dir_begin()
-	if err != OK:
-		return out
-	while true:
-		var fn := da.get_next()
-		if fn == "":
-			break
-		if da.current_is_dir():
-			continue
-		if not fn.ends_with(".png"):
-			continue
-		out.append(base.path_join(fn))
-	da.list_dir_end()
+	if da != null:
+		for fn in da.get_files():
+			if fn.ends_with(".png"):
+				var full := base.path_join(fn)
+				if ResourceLoader.exists(full):
+					seen[full] = true
+	var fb: Variant = _pixeline_png_fallback_dict().get(base, null)
+	if fb is PackedStringArray:
+		for p in fb as PackedStringArray:
+			if ResourceLoader.exists(p):
+				seen[p] = true
+	var out: Array[String] = []
+	for k in seen.keys():
+		out.append(str(k))
 	out.sort()
 	return out
 
@@ -188,9 +283,9 @@ static func hair_rows(gender_male: bool) -> Array[Dictionary]:
 	var hair_sub := "Hair Male/" if gender_male else "Hair Female/"
 	var head_sub := "Clothes Male/Head/" if gender_male else "Clothes Female/Head/"
 	for p in _collect_png_sorted(PIXELINE_DIR + hair_sub):
-		rows.append({"label": _pretty_label_from_path(p), "path": p})
+		rows.append({"label": display_label_zh(p), "path": p})
 	for p in _collect_png_sorted(PIXELINE_DIR + head_sub):
-		rows.append({"label": _pretty_label_from_path(p), "path": p})
+		rows.append({"label": display_label_zh(p), "path": p})
 	return rows
 
 
@@ -198,7 +293,7 @@ static func outfit_rows(gender_male: bool) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = [{"label": "（無）", "path": ""}]
 	var chest_sub := "Clothes Male/Chest/" if gender_male else "Clothes Female/Chest/"
 	for p in _collect_png_sorted(PIXELINE_DIR + chest_sub):
-		rows.append({"label": _pretty_label_from_path(p), "path": p})
+		rows.append({"label": display_label_zh(p), "path": p})
 	return rows
 
 
@@ -207,7 +302,7 @@ static func pants_rows(gender_male: bool) -> Array[Dictionary]:
 	var rows: Array[Dictionary] = [{"label": "（無）", "path": ""}]
 	var legs_sub := "Clothes Male/Pants/" if gender_male else "Clothes Female/Legs/"
 	for p in _collect_png_sorted(PIXELINE_DIR + legs_sub):
-		rows.append({"label": _pretty_label_from_path(p), "path": p})
+		rows.append({"label": display_label_zh(p), "path": p})
 	return rows
 
 

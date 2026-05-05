@@ -1694,7 +1694,7 @@ func _open_boot_styling_wizard() -> void:
 	if _styling_title_label != null:
 		_styling_title_label.text = "角色造型（Pixeline）\n選好外觀後按「套用」或按「關閉」以開始遊戲。"
 	if _styling_hint_label != null:
-		_styling_hint_label.text = "開局僅解鎖部分服飾；未解鎖可先預覽。與主表同格裁切；之後可從右上角「造型」再改。"
+		_styling_hint_label.text = "本專案內 Pixeline 服飾／髮型開局皆可套用；與主表同格裁切。之後可從右上角「造型」再改。"
 	settings_popup.visible = false
 	hint_popup.visible = false
 	quest_log_popup.visible = false
@@ -1890,6 +1890,9 @@ func _styling_init_unlock_defaults() -> void:
 	_styling_unlock_set.clear()
 	for p in PlayerStylingCatalog.starter_unlock_paths():
 		_styling_unlock_set[p] = true
+	for p in PlayerStylingCatalog.all_catalog_cosmetic_paths():
+		if ResourceLoader.exists(p):
+			_styling_unlock_set[p] = true
 
 
 func _styling_merge_unlocks_array(raw: Variant) -> void:

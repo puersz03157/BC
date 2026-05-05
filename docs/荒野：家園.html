@@ -3,7 +3,6 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<!-- GitHub Pages / CDN 快取：強制重新驗證入口頁（.pck 另見下方 Engine 修正） -->
 		<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 		<meta http-equiv="Pragma" content="no-cache" />
 		<meta http-equiv="Expires" content="0" />
@@ -115,10 +114,7 @@ body {
 
 		<script src="荒野：家園.js"></script>
 		<script>
-// GitHub Pages：預設 Cache-Control max-age=600，瀏覽器易沿用舊 .pck。改為以「檔案位元組數」當 query，
-// fetch 用帶參數 URL，寫入 memfs 仍用乾淨檔名（與 --main-pack 一致）。
 (function () {
-	const _startGame = Engine.prototype.startGame;
 	Engine.prototype.startGame = function (override) {
 		this.config.update(override);
 		const exe = this.config.executable;
@@ -141,7 +137,7 @@ body {
 		});
 	};
 })();
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"荒野：家園","experimentalVK":true,"fileSizes":{"荒野：家園.pck":42886296,"荒野：家園.wasm":35749181},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"荒野：家園","experimentalVK":true,"fileSizes":{"荒野：家園.pck":42889752,"荒野：家園.wasm":35749181},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 

@@ -1,6 +1,7 @@
 class_name VisualRegistry
 extends RefCounted
 ## 集中管理遊戲內貼圖。若 `res://assets/override/` 下有同名 PNG，會優先使用（`tree.png`、`rock.png`、`berry_bush.png` 等），方便你換成 Aseprite／素材包輸出。
+## 檔名請與程式一致；若從 Windows 複製出 `Tree.png` 這類大小寫差異，編輯器有時仍會載入，但 **Web／匯出後 ResourceLoader 常區分大小寫**，會變成看不到自訂圖（改顯示內建烘焙）。此處會對 override 目錄做一次不分大小寫的檔名比對。
 ## 否則使用內建程式烘焙（像素風暫代）。
 
 const OVERRIDE_DIR := "res://assets/override/"
@@ -204,8 +205,23 @@ static func campfire_tex() -> Texture2D:
 	return _campfire
 
 
+## 回傳實際可 `ResourceLoader.exists` 的 override 路徑（含大小寫容錯）。
+static func _resolve_override_texture_path(file_name: String) -> String:
+	var exact := OVERRIDE_DIR.path_join(file_name)
+	if ResourceLoader.exists(exact):
+		return exact
+	var want := file_name.to_lower()
+	var d := DirAccess.open(OVERRIDE_DIR.trim_suffix("/"))
+	if d == null:
+		return exact
+	for fn in d.get_files():
+		if fn.to_lower() == want:
+			return OVERRIDE_DIR.path_join(fn)
+	return exact
+
+
 static func _load_or_make(file_name: String, maker: Callable, max_long_side: int = 0) -> Texture2D:
-	var path := OVERRIDE_DIR.path_join(file_name)
+	var path := _resolve_override_texture_path(file_name)
 	if ResourceLoader.exists(path):
 		var res := load(path)
 		if res is Texture2D:
