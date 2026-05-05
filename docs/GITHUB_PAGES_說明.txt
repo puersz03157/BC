@@ -20,5 +20,9 @@ GitHub Pages：用本資料夾 docs/ 當網站根目錄。
 在 Godot 重新 Web 匯出後，把新檔覆蓋進 docs/，再執行 git add docs、git commit、git push。
 【重要】根網址 https://帳號.github.io/倉庫名/ 只會讀 index.html。匯出後請將「荒野：家園.html」複製並覆蓋成 index.html（與首次上架說明相同），否則 GitHub 上已更新檔案，頁面仍會看起來是舊的。
 
+【若已更新仍像舊版】
+1) 確認 Godot 已「重新匯出」Web，且 docs 內 .pck 的檔案大小有變（或至少與 index.html 裡 GODOT_CONFIG 的 fileSizes 一致）。程式在 .pck 裡，只改 .gd 沒重匯＝線上永遠舊版。
+2) index.html 已內建「以 .pck 位元組數當 query」避免 GitHub Pages 快取舊包；若仍異常，請用 Chrome 開站台 → F12 → Application → Clear site data，再強制重新整理（Ctrl+F5）。
+
 【倉庫根目錄若在上一層】
 若 Git 倉庫是整個 CB 而不是 wilderness_home，請把網頁匯出放在「倉庫根」的 docs/，並在該層 git；Pages 只認倉庫最外層的 /docs。
