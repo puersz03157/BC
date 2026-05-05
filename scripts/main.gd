@@ -1,5 +1,5 @@
 extends Node2D
-## 初始之地 (0,0) + 序章教學：石斧 → 營火。Tab 雙人；共用背包，雙人時 1P／2P 主手裝備分開。
+## 初始之地 (0,0) + 序章教學：石斧 → 營火 → 木箱 → 工作台 → 探索。Tab 雙人；共用背包，雙人時 1P／2P 主手裝備分開。
 
 ## 「?」鈕一列以下、且不在右上狀態／任務欄內，才算「世界操作區」。
 const HUD_TOP_HINT_ROW := 48.0
@@ -12,7 +12,7 @@ const UI_CJK_FONT := "res://assets/fonts/NotoSansCJKtc-Regular.otf"
 const BGM_PATH := "res://assets/audio/music/Drafting_Tomorrow.mp3"
 const USER_SAVE_PATH := "user://wilderness_home_save.json"
 const SETTINGS_PATH := "user://wilderness_settings.cfg"
-const SAVE_FORMAT_VERSION := 19
+const SAVE_FORMAT_VERSION := 21
 ## 存檔版本 ≥ 此值時：各區野生資源僅在首次進入時隨機生成，之後過圖／讀檔皆還原同一布局（砍完即沒，樹苗／交易等另行取得）。
 const SAVE_REGION_WILD_LAYOUT_VERSION := 17
 ## 存檔版本低於此值時：將讀檔時角色已穿上的 Pixeline 路徑一併視為已解鎖（舊檔無 styling_unlocks）。
@@ -85,7 +85,7 @@ var _msg_time: float = 0.0
 var _bottom_hud: BottomHudController
 var _hud_expand_btn: Button = null
 var _build_grid: BuildGridOverlay
-## 開啟工作台製作 UI 時，用於判定鄰近木箱是否併入材料池。
+## 開啟工作台製作 UI 時，用於判定鄰近「帶倉儲的箱子」是否併入材料池。
 var _workbench_popup_anchor: WorldBuildPiece = null
 
 var _scene_prop: PackedScene = preload("res://scenes/interactable_prop.tscn")
@@ -101,7 +101,10 @@ var _spawn_avoid_water_layers: Array[TileMapLayer] = []
 var _spawn_avoid_onground_layers: Array[TileMapLayer] = []
 ## 單人觸控導航：對應的觸控點 index（-1 表示無）。
 var _p1_touch_idx: int = -1
-var _mobile_touch_bar: Control
+var _mobile_touch_bar: Control = null
+## 設定：是否顯示手機／網頁用觸控快捷列（右下角）。
+var _mobile_touch_bar_user_enabled: bool = true
+var _settings_mobile_touch_check: CheckButton = null
 var _campfire_cook_popup: PanelContainer
 var _btn_campfire_craft_jerky: Button
 var _btn_campfire_eat_jerky: Button
@@ -149,7 +152,6 @@ var _styling_hint_label: Label
 var _boot_styling_active: bool = false
 var _boot_styling_blocker: ColorRect
 var _boot_saved_left_vitals_visible: bool = true
-var _boot_saved_mobile_touch_visible: bool = false
 var _loading_save: bool = false
 var _game_boot_complete: bool = false
 var _sfx_volume: float = 1.0
@@ -196,13 +198,17 @@ var _hotbar_ctrl: HotbarController = null
 var _backpack_ctx_menu: PopupMenu = null
 var _backpack_ctx_slot: int = -1
 var _ctx_hotbar_map_id: StringName = &""
+var _chest_take_dialog: AcceptDialog = null
+var _chest_take_spin: SpinBox = null
+var _chest_take_hint: Label = null
+var _chest_take_slot_idx: int = -1
 var _bgm_player: AudioStreamPlayer
 ## 角色技能：&"dash" 短衝刺、&"charge" 蓄力、&"iron_wall" 鐵壁（教官處裝備與技能書解鎖）。
 var _p1_character_skill: StringName = &"dash"
 var _p2_character_skill: StringName = &"dash"
 var _skill_unlock_charge: bool = false
 var _skill_unlock_iron_wall: bool = false
-## 蓄力：下一次武器技能（木槍迴旋／鐵劍投擲）傷害加倍。
+## 蓄力：下一次武器技能（木槍迴旋／石短劍投擲）傷害加倍。
 var _p1_next_weapon_skill_double: bool = false
 var _p2_next_weapon_skill_double: bool = false
 ## 鐵壁：秒；受敵方接觸傷害時若該玩家啟用中則減半（共用生命條依受擊者槽位判定）。
@@ -302,13 +308,13 @@ func _ready() -> void:
 	_setup_left_vitals_panel_icons()
 	_apply_top_right_style()
 	_load_settings()
+	_setup_mobile_touch_bar()
 	_setup_settings_controls()
 	_apply_audio_settings()
 	_apply_player_names()
 	_setup_p1_world_coord_label()
 	_setup_mouse_world_coord_label()
 	_update_vitals_bars_ui()
-	_setup_mobile_touch_bar()
 	camera.make_current()
 	camera.position = player1.global_position
 	var _cam_sz := get_viewport_rect().size
@@ -381,8 +387,50 @@ func _apply_ui_cjk_font() -> void:
 	ThemeDB.fallback_font = ff
 
 
+func _mobile_touch_platform() -> bool:
+	return OS.has_feature("web") or DisplayServer.is_touchscreen_available()
+
+
+func _mobile_touch_bar_bottom_clearance() -> float:
+	## 與底部主功能表（展開時）及收合條錯開；收合時略抬高即可。
+	if _bottom_hud != null and not _bottom_hud.is_hud_minimized():
+		return 288.0
+	return 96.0
+
+
+func _layout_mobile_touch_bar() -> void:
+	if _mobile_touch_bar == null:
+		return
+	var bar := _mobile_touch_bar as HBoxContainer
+	var side := 10.0
+	var btn_h := 44.0
+	var sep := 6.0
+	var nbtn := float(bar.get_child_count())
+	var btn_w := 56.0
+	var w := nbtn * btn_w + maxf(0.0, nbtn - 1.0) * sep
+	var y_clear := _mobile_touch_bar_bottom_clearance()
+	bar.anchor_left = 1.0
+	bar.anchor_right = 1.0
+	bar.anchor_top = 1.0
+	bar.anchor_bottom = 1.0
+	bar.offset_right = -side
+	bar.offset_left = -side - w
+	bar.offset_bottom = -y_clear
+	bar.offset_top = bar.offset_bottom - btn_h
+	bar.z_index = 24
+
+
+func _apply_mobile_touch_bar_visibility() -> void:
+	if _mobile_touch_bar == null:
+		return
+	var want := _mobile_touch_platform() and _mobile_touch_bar_user_enabled and not two_player
+	_mobile_touch_bar.visible = want
+	if want:
+		_layout_mobile_touch_bar()
+
+
 func _setup_mobile_touch_bar() -> void:
-	if not (OS.has_feature("web") or DisplayServer.is_touchscreen_available()):
+	if not _mobile_touch_platform():
 		return
 	var ui := $CanvasLayer/UI as Control
 	var bar := HBoxContainer.new()
@@ -390,17 +438,14 @@ func _setup_mobile_touch_bar() -> void:
 	bar.mouse_filter = Control.MOUSE_FILTER_STOP
 	bar.add_theme_constant_override("separation", 6)
 	ui.add_child(bar)
-	bar.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	# 避開右上直向按鈕（⚙／?／任務／拆除）與右側任務欄；整條向左避免與拆除鈕重疊。
-	bar.offset_left = -368.0
-	bar.offset_top = 180.0
-	bar.offset_right = -76.0
-	bar.offset_bottom = 228.0
 	bar.add_child(_mk_mobile_btn("採集", _mobile_btn_harvest))
 	bar.add_child(_mk_mobile_btn("交互", _mobile_btn_interact_p1))
 	bar.add_child(_mk_mobile_btn("技能", _mobile_btn_character_skill_p1))
 	bar.add_child(_mk_mobile_btn("武技", _mobile_btn_weapon_skill_p1))
 	_mobile_touch_bar = bar
+	if not get_viewport().size_changed.is_connected(_layout_mobile_touch_bar):
+		get_viewport().size_changed.connect(_layout_mobile_touch_bar)
+	_apply_mobile_touch_bar_visibility()
 
 
 func _mk_mobile_btn(txt: String, cb: Callable) -> Button:
@@ -1059,7 +1104,14 @@ func _quest_completed_bbcode() -> String:
 		lines.append("[color=#88e498]✓[/color] 製作石斧  （底部製作 · 木 3 · 石 2）")
 	if quest_phase >= 3:
 		lines.append("[color=#88e498]✓[/color] 放置營火  （加工站 · 木 5 · 石 3）")
-		lines.append("[color=#88e498]✓[/color] 序章目標達成  （土路傳送探索鄰近區域）")
+	if quest_phase >= 4:
+		lines.append("[color=#88e498]✓[/color] 放置木箱  （底部建造 · 木 6）")
+	if quest_phase >= 5:
+		lines.append(
+			"[color=#88e498]✓[/color] 放置工作台  （底部建造 · 木 %d · 石 %d）"
+			% [GameConstants.BUILD_WORKBENCH_WOOD, GameConstants.BUILD_WORKBENCH_STONE]
+		)
+		lines.append("[color=#88e498]✓[/color] 序章進度  （土路傳送探索鄰近區域）")
 	if lines.is_empty():
 		return (
 			"[color=#9aa8ba]尚無已完成的主線紀錄。[/color]\n\n"
@@ -1076,7 +1128,7 @@ func _show_hint() -> void:
 		+ "雙人 Tab 切換：2P 方向鍵／左搖桿移動（僅一支手把時給 2P；兩支時用第二支）或右鍵拖移  ·  K／A 互動  ·  L／LB 角色技  ·  P／RB 武器技  ·  X 採集  ·  任意手把 B 關閉視窗（同 Esc）"
 	)
 	if OS.has_feature("web") or DisplayServer.is_touchscreen_available():
-		t += "\n手機/網頁：中上區點走  ·  右上快捷按鈕操作  ·  長按快捷欄右鍵編排"
+		t += "\n手機/網頁：右下角快捷列（可在⚙設定關閉）· 長按快捷欄右鍵編排"
 	hint_label.text = t
 
 
@@ -1633,7 +1685,6 @@ func _open_boot_styling_wizard() -> void:
 	_boot_saved_left_vitals_visible = left_vitals_panel.visible
 	left_vitals_panel.visible = false
 	if _mobile_touch_bar != null:
-		_boot_saved_mobile_touch_visible = _mobile_touch_bar.visible
 		_mobile_touch_bar.visible = false
 	player1.process_mode = Node.PROCESS_MODE_DISABLED
 	player2.process_mode = Node.PROCESS_MODE_DISABLED
@@ -1688,8 +1739,7 @@ func _end_boot_styling() -> void:
 	if _styling_hint_label != null:
 		_styling_hint_label.text = "與主表同格裁切；無獨立左向圖時會自動鏡像。變更後請手動存檔以保留。"
 	left_vitals_panel.visible = _boot_saved_left_vitals_visible
-	if _mobile_touch_bar != null:
-		_mobile_touch_bar.visible = _boot_saved_mobile_touch_visible
+	_apply_mobile_touch_bar_visibility()
 	player1.process_mode = Node.PROCESS_MODE_INHERIT
 	if two_player:
 		player2.process_mode = Node.PROCESS_MODE_INHERIT
@@ -2076,6 +2126,8 @@ func _toggle_styling_popup() -> void:
 func _toggle_settings_popup() -> void:
 	settings_popup.visible = not settings_popup.visible
 	if settings_popup.visible:
+		if _settings_mobile_touch_check != null:
+			_settings_mobile_touch_check.button_pressed = _mobile_touch_bar_user_enabled
 		_close_styling_popup()
 		hint_popup.visible = false
 		quest_log_popup.visible = false
@@ -2099,6 +2151,8 @@ func _load_settings() -> void:
 	_bgm_muted = cfg.get_value("audio", "bgm_muted", false)
 	_p1_name = cfg.get_value("players", "p1_name", "")
 	_p2_name = cfg.get_value("players", "p2_name", "")
+	if _mobile_touch_platform():
+		_mobile_touch_bar_user_enabled = bool(cfg.get_value("ui", "touch_action_bar_enabled", true))
 
 
 func _save_settings() -> void:
@@ -2109,6 +2163,8 @@ func _save_settings() -> void:
 	cfg.set_value("audio", "bgm_muted", _bgm_muted)
 	cfg.set_value("players", "p1_name", _p1_name)
 	cfg.set_value("players", "p2_name", _p2_name)
+	if _mobile_touch_platform():
+		cfg.set_value("ui", "touch_action_bar_enabled", _mobile_touch_bar_user_enabled)
 	cfg.save(SETTINGS_PATH)
 
 
@@ -2214,6 +2270,37 @@ func _setup_settings_controls() -> void:
 	vbox.add_child(bgm_res[0])
 	vbox.move_child(bgm_res[0], insert_idx)
 	insert_idx += 1
+
+	if _mobile_touch_platform():
+		var touch_sep: HSeparator = _mk_sep.call()
+		vbox.add_child(touch_sep)
+		vbox.move_child(touch_sep, insert_idx)
+		insert_idx += 1
+		var touch_lbl: Label = _mk_section_lbl.call("觸控（手機／網頁）")
+		vbox.add_child(touch_lbl)
+		vbox.move_child(touch_lbl, insert_idx)
+		insert_idx += 1
+		_settings_mobile_touch_check = CheckButton.new()
+		_settings_mobile_touch_check.text = "顯示右下角快捷鍵列"
+		_settings_mobile_touch_check.button_pressed = _mobile_touch_bar_user_enabled
+		_settings_mobile_touch_check.focus_mode = Control.FOCUS_NONE
+		_settings_mobile_touch_check.toggled.connect(func(on: bool) -> void:
+			_mobile_touch_bar_user_enabled = on
+			_apply_mobile_touch_bar_visibility()
+			_layout_mobile_touch_bar()
+			_save_settings()
+		)
+		vbox.add_child(_settings_mobile_touch_check)
+		vbox.move_child(_settings_mobile_touch_check, insert_idx)
+		insert_idx += 1
+		var touch_hint := Label.new()
+		touch_hint.text = "採集／互動／角色技／武器技；展開主功能表時列位置上移以免擋住。"
+		touch_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		touch_hint.add_theme_font_size_override("font_size", 11)
+		touch_hint.add_theme_color_override("font_color", Color(0.55, 0.6, 0.68))
+		vbox.add_child(touch_hint)
+		vbox.move_child(touch_hint, insert_idx)
+		insert_idx += 1
 
 	# ── 雙人模式 ─────────────────────────────────────────────
 	var two_p_sep: HSeparator = _mk_sep.call()
@@ -2464,7 +2551,7 @@ func _setup_workbench_craft_popup() -> void:
 			Color(0.45, 0.82, 0.98),
 		],
 		[
-			HudItemIcons.IRON_SWORD, "鐵製短劍", "近距快攻・技能投擲",
+			HudItemIcons.IRON_SWORD, "石製短劍", "近距快攻・技能投擲",
 			[[HudItemIcons.WOOD, GameConstants.CRAFT_SWORD_WOOD],
 			 [HudItemIcons.STONE, GameConstants.CRAFT_SWORD_STONE]],
 			Color(0.98, 0.80, 0.35),
@@ -2617,7 +2704,7 @@ func _setup_workbench_craft_popup() -> void:
 func _refresh_workbench_craft_popup() -> void:
 	if _btn_workbench_craft_spear == null:
 		return
-	var extras := _workbench_adjacent_chest_storages(_workbench_popup_anchor)
+	var extras := _workbench_adjacent_storage_inventories(_workbench_popup_anchor)
 	var pool: Array[GameInventory] = [inv]
 	pool.append_array(extras)
 	var can_spear := (
@@ -3218,7 +3305,7 @@ func _weapon_skill_damage_multiplier(player_idx: int) -> int:
 
 
 func _on_workbench_craft_spear_pressed() -> void:
-	var extras := _workbench_adjacent_chest_storages(_workbench_popup_anchor)
+	var extras := _workbench_adjacent_storage_inventories(_workbench_popup_anchor)
 	if inv.try_craft_wood_spear_at_bench(extras):
 		GameSfx.play_craft()
 		_update_inv_bar()
@@ -3236,7 +3323,7 @@ func _on_workbench_craft_spear_pressed() -> void:
 
 
 func _on_workbench_craft_sword_pressed() -> void:
-	var extras := _workbench_adjacent_chest_storages(_workbench_popup_anchor)
+	var extras := _workbench_adjacent_storage_inventories(_workbench_popup_anchor)
 	if inv.try_craft_iron_sword_at_bench(extras):
 		GameSfx.play_craft()
 		_update_inv_bar()
@@ -3248,13 +3335,13 @@ func _on_workbench_craft_sword_pressed() -> void:
 			sw_msg = " 已裝在 1P 主手。"
 		elif sw_p2:
 			sw_msg = " 已裝在 2P 主手。"
-		_show_msg("製作了鐵製短劍！" + sw_msg)
+		_show_msg("製作了石製短劍！" + sw_msg)
 	else:
 		_show_msg("木材或石頭不足。")
 
 
 func _on_workbench_craft_sticky_armor_pressed() -> void:
-	var extras := _workbench_adjacent_chest_storages(_workbench_popup_anchor)
+	var extras := _workbench_adjacent_storage_inventories(_workbench_popup_anchor)
 	if inv.try_craft_sticky_armor_at_bench(extras):
 		GameSfx.play_craft()
 		_update_inv_bar()
@@ -3268,7 +3355,7 @@ func _on_workbench_craft_sticky_armor_pressed() -> void:
 
 
 func _on_workbench_craft_dirt_pressed() -> void:
-	var extras := _workbench_adjacent_chest_storages(_workbench_popup_anchor)
+	var extras := _workbench_adjacent_storage_inventories(_workbench_popup_anchor)
 	if inv.try_craft_dirt_at_bench(extras):
 		GameSfx.play_craft()
 		_update_inv_bar()
@@ -3465,13 +3552,13 @@ func _try_use_hotbar_slot(idx: int) -> void:
 				_show_msg("沒有可裝備的木製長槍。")
 		&"iron_sword":
 			if inv.try_equip_sword_from_inventory():
-				_show_msg("已裝備鐵製短劍（1P）。")
+				_show_msg("已裝備石製短劍（1P）。")
 				_update_inv_bar()
 			elif two_player and inv.try_equip_sword_from_inventory_for(1):
-				_show_msg("已裝備鐵製短劍（2P）。")
+				_show_msg("已裝備石製短劍（2P）。")
 				_update_inv_bar()
 			else:
-				_show_msg("沒有可裝備的鐵製短劍。")
+				_show_msg("沒有可裝備的石製短劍。")
 		&"berries":
 			_try_eat_raw_berry()
 		&"jerky":
@@ -3522,6 +3609,135 @@ func _ensure_backpack_ctx_menu() -> void:
 	_backpack_ctx_menu = m
 
 
+func _ensure_chest_take_dialog() -> void:
+	if _chest_take_dialog != null:
+		return
+	var ui := $CanvasLayer/UI as Control
+	var dlg := AcceptDialog.new()
+	dlg.name = "ChestTakeAmountDialog"
+	dlg.title = "從箱子取出"
+	dlg.ok_button_text = "取出"
+	dlg.min_size = Vector2i(320, 168)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 10)
+	_chest_take_hint = Label.new()
+	_chest_take_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vb.add_child(_chest_take_hint)
+	var spin := SpinBox.new()
+	spin.min_value = 1.0
+	spin.max_value = 1.0
+	spin.step = 1.0
+	spin.rounded = true
+	spin.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	spin.custom_minimum_size = Vector2(120, 0)
+	_chest_take_spin = spin
+	vb.add_child(spin)
+	dlg.add_child(vb)
+	dlg.confirmed.connect(_on_chest_take_confirmed)
+	dlg.canceled.connect(_on_chest_take_canceled)
+	ui.add_child(dlg)
+	_chest_take_dialog = dlg
+
+
+func _on_chest_take_canceled() -> void:
+	_chest_take_slot_idx = -1
+
+
+func _on_chest_take_confirmed() -> void:
+	var slot := _chest_take_slot_idx
+	_chest_take_slot_idx = -1
+	if slot < 0 or _chest_take_spin == null:
+		return
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return
+	var want := int(_chest_take_spin.value)
+	if want <= 0:
+		return
+	_take_from_open_chest_slot_to_backpack(slot, want)
+
+
+func _open_chest_take_amount_dialog(slot_idx: int) -> void:
+	_ensure_chest_take_dialog()
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return
+	var cst := _bottom_hud.get_open_chest_inventory()
+	if cst == null:
+		return
+	var snap := cst.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return
+	var q := int(snap.get("q", 0))
+	if q <= 1:
+		return
+	var idv: Variant = snap.get("id", &"")
+	var sid: StringName = idv as StringName if idv is StringName else StringName(str(idv))
+	var nm := HudItemIcons.stackable_display_name_zh(sid)
+	_chest_take_slot_idx = slot_idx
+	if _chest_take_hint != null:
+		_chest_take_hint.text = "%s · 箱內共 %d 個" % [nm, q]
+	if _chest_take_spin != null:
+		_chest_take_spin.max_value = float(q)
+		_chest_take_spin.min_value = 1.0
+		_chest_take_spin.value = float(q)
+	if _chest_take_dialog != null:
+		_chest_take_dialog.popup_centered()
+
+
+func _take_from_open_chest_slot_to_backpack(slot_idx: int, amount: int) -> void:
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return
+	var cst := _bottom_hud.get_open_chest_inventory()
+	if cst == null or amount <= 0:
+		return
+	var snap := cst.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return
+	var idv: Variant = snap.get("id", &"")
+	var sid: StringName = idv as StringName if idv is StringName else StringName(str(idv))
+	var q := int(snap.get("q", 0))
+	if sid == &"" or q <= 0:
+		return
+	var take := mini(amount, q)
+	if take <= 0:
+		return
+	var removed: int = cst.remove_quantity_from_slot(slot_idx, take)
+	if removed <= 0:
+		return
+	var overflow := inv.try_add_item(sid, removed)
+	if overflow > 0:
+		var back: int = cst.try_add_item(sid, overflow)
+		if back > 0:
+			var re_ov := inv.try_add_item(sid, back)
+			if re_ov > 0:
+				push_error("Main: chest withdraw lost stack id=%s n=%d" % [str(sid), re_ov])
+	var placed := removed - overflow
+	var nm := HudItemIcons.stackable_display_name_zh(sid)
+	if overflow == 0:
+		_show_msg("已將 %d 個%s 取回背包。" % [placed, nm])
+	elif placed <= 0:
+		_show_msg("背包已滿，無法取回%s。" % nm)
+	else:
+		_show_msg("背包空間不足，僅取回 %d 個%s（%d 個留在箱子）。" % [placed, nm, overflow])
+	_update_inv_bar()
+	_autosave_if_ready()
+
+
+func _on_chest_slot_withdraw_requested(slot_idx: int, _screen_pos: Vector2) -> void:
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return
+	var cst := _bottom_hud.get_open_chest_inventory()
+	if cst == null:
+		return
+	var snap := cst.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return
+	var q := int(snap.get("q", 0))
+	if q <= 1:
+		_take_from_open_chest_slot_to_backpack(slot_idx, 1)
+	else:
+		_open_chest_take_amount_dialog(slot_idx)
+
+
 func _inv_stack_id_to_hotbar_item_id(stack_id: StringName) -> StringName:
 	match stack_id:
 		&"axe_spare":
@@ -3563,9 +3779,9 @@ func _on_backpack_slot_context_requested(slot_idx: int, screen_pos: Vector2) -> 
 		if two_player:
 			m.add_item("裝備木製長槍（2P）", 111)
 	elif sid == &"sword_spare":
-		m.add_item("裝備鐵製短劍（1P）", 120)
+		m.add_item("裝備石製短劍（1P）", 120)
 		if two_player:
-			m.add_item("裝備鐵製短劍（2P）", 121)
+			m.add_item("裝備石製短劍（2P）", 121)
 	elif sid == &"sticky_armor_spare":
 		m.add_item("穿上黏黏護甲", 130)
 	_ctx_hotbar_map_id = _inv_stack_id_to_hotbar_item_id(sid)
@@ -3574,12 +3790,8 @@ func _on_backpack_slot_context_requested(slot_idx: int, screen_pos: Vector2) -> 
 			m.add_separator()
 		for hi in 9:
 			m.add_item("設為快捷鍵 %d" % (hi + 1), 300 + hi)
-	if _bottom_hud != null and _bottom_hud.is_chest_panel_open():
-		if m.item_count > 0:
-			m.add_separator()
-		m.add_item("放入木箱", 400)
 	if m.item_count == 0:
-		_show_msg("此格道具無法裝備、設快捷鍵或放入木箱。")
+		_show_msg("此格道具無法裝備或設快捷鍵。")
 		_backpack_ctx_slot = -1
 		return
 	m.popup(Rect2(screen_pos, Vector2.ZERO))
@@ -3618,6 +3830,75 @@ func _try_transfer_backpack_slot_to_chest(slot_idx: int) -> bool:
 	return false
 
 
+func _chest_has_non_empty_slot_with_id(cst: GameInventory, sid: StringName) -> bool:
+	for ti in cst.slot_count:
+		var tsp := cst.get_slot_snapshot(ti)
+		if tsp.is_empty():
+			continue
+		var tidv: Variant = tsp.get("id", &"")
+		var tid: StringName = tidv as StringName if tidv is StringName else StringName(str(tidv))
+		if tid == sid:
+			return true
+	return false
+
+
+## 一鍵入箱：僅處理「目前開啟的箱子裡至少已有一格同 id」的物品；可併未滿疊，或移入箱內空格（不引入箱內從未出現過的種類）。
+func _try_transfer_backpack_slot_to_chest_quick_stash(slot_idx: int) -> bool:
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return false
+	var cst := _bottom_hud.get_open_chest_inventory()
+	if cst == null:
+		return false
+	var snap := inv.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return false
+	var idv: Variant = snap.get("id", &"")
+	var sid: StringName = idv as StringName if idv is StringName else StringName(str(idv))
+	var q := int(snap.get("q", 0))
+	if sid == &"" or q <= 0:
+		return false
+	if not _chest_has_non_empty_slot_with_id(cst, sid):
+		return false
+	return _try_transfer_backpack_slot_to_chest(slot_idx)
+
+
+func _on_backpack_quick_send_to_chest(slot_idx: int) -> void:
+	if _try_transfer_backpack_slot_to_chest(slot_idx):
+		_show_msg("已放入箱子。")
+		_update_inv_bar()
+		_autosave_if_ready()
+	else:
+		_show_msg("無法放入箱子（沒有空格或同物品已滿疊）。")
+
+
+func _try_stash_all_backpack_to_open_chest() -> bool:
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return false
+	if _bottom_hud.get_open_chest_inventory() == null:
+		return false
+	var any := false
+	var safety := 0
+	while safety < 300:
+		safety += 1
+		var progressed := false
+		for i in inv.slot_count:
+			if _try_transfer_backpack_slot_to_chest_quick_stash(i):
+				progressed = true
+				any = true
+		if not progressed:
+			break
+	return any
+
+
+func _on_chest_quick_stash_requested() -> void:
+	if _try_stash_all_backpack_to_open_chest():
+		_show_msg("已將背包中可集中的物品放入箱子（僅箱內已有種類）。")
+		_update_inv_bar()
+		_autosave_if_ready()
+	else:
+		_show_msg("沒有可放入的物品（箱子須已有該種類，且須有未滿疊或空格）。")
+
+
 func _on_backpack_ctx_menu_id(id: int) -> void:
 	var slot := _backpack_ctx_slot
 	_backpack_ctx_slot = -1
@@ -3627,12 +3908,6 @@ func _on_backpack_ctx_menu_id(id: int) -> void:
 	if snap.is_empty():
 		return
 	var sid: StringName = StringName(str(snap.get("id", &"")))
-	if id == 400:
-		if _try_transfer_backpack_slot_to_chest(slot):
-			_show_msg("已放入木箱。")
-			_update_inv_bar()
-			_autosave_if_ready()
-		return
 	if id >= 300 and id < 309:
 		var hi := id - 300
 		var hb := _ctx_hotbar_map_id
@@ -3913,8 +4188,8 @@ func _serialize_entity_node(c: Node) -> Dictionary:
 			"y": w.global_position.y,
 			"door": w.door_open,
 		}
-		if w.piece_kind == WorldBuildPiece.PieceKind.CHEST and w.chest_storage != null:
-			pd["chest"] = w.chest_storage.storage_serialize()
+		if WorldBuildPiece.piece_kind_has_storage_inventory(w.piece_kind) and w.chest_storage != null:
+			pd["storage"] = w.chest_storage.storage_serialize()
 		return pd
 	if c is Node2D and c.is_in_group("berry_bush"):
 		var ripe: bool = bool((c as Node2D).call("get_save_ripe"))
@@ -4002,7 +4277,14 @@ func apply_game_state(d: Dictionary) -> void:
 			_region_wild_init[str(rk)] = true
 	_clear_spawned_entities()
 	money = int(d.get("money", 0))
-	quest_phase = int(d.get("quest_phase", 1))
+	var raw_quest_ph := int(d.get("quest_phase", 1))
+	quest_phase = raw_quest_ph
+	if loaded_save_ver < 21 and quest_phase == 4:
+		## v20：phase 4＝探索；v21：phase 4＝工作台、phase 5＝探索。
+		quest_phase = 5
+	if loaded_save_ver < 20 and raw_quest_ph >= 3:
+		## 更舊：phase 3＝序章已結束；新版最末為探索 phase 5。
+		quest_phase = 5
 	var bk_raw := int(d.get("build_kind", int(BuildKind.NONE)))
 	if bk_raw < 0 or bk_raw > int(BuildKind.CHEST):
 		bk_raw = int(BuildKind.NONE)
@@ -4178,6 +4460,7 @@ func _spawn_entity_from_save(ed: Dictionary) -> void:
 			entities.add_child(lp)
 		"piece":
 			var pk_raw := int(ed.get("k", 0))
+			## 與 `WorldBuildPiece.PieceKind` 最大項對齊；若新增建築種類請一併提高上限。
 			var pk_max := int(WorldBuildPiece.PieceKind.CHEST)
 			var pk := clampi(pk_raw, 0, pk_max) as WorldBuildPiece.PieceKind
 			var piece := WorldBuildPiece.new()
@@ -4185,10 +4468,12 @@ func _spawn_entity_from_save(ed: Dictionary) -> void:
 			piece.door_open = bool(ed.get("door", false))
 			piece.global_position = Vector2(float(ed.get("x", 0.0)), float(ed.get("y", 0.0)))
 			entities.add_child(piece)
-			if pk == WorldBuildPiece.PieceKind.CHEST:
-				var ch: Variant = ed.get("chest", {})
-				if ch is Dictionary and piece.chest_storage != null:
-					piece.chest_storage.storage_deserialize(ch as Dictionary)
+			if WorldBuildPiece.piece_kind_has_storage_inventory(pk):
+				var st: Variant = ed.get("storage", null)
+				if st == null or not st is Dictionary:
+					st = ed.get("chest", {})
+				if st is Dictionary and piece.chest_storage != null:
+					piece.chest_storage.storage_deserialize(st as Dictionary)
 		"campfire":
 			var cf := StaticBody2D.new()
 			cf.set_script(_campfire_script)
@@ -4407,13 +4692,11 @@ func _set_two_player(on: bool, silent: bool = false) -> void:
 	if two_player:
 		if not silent:
 			player2.global_position = player1.global_position + Vector2(48, 32)
-		if _mobile_touch_bar:
-			_mobile_touch_bar.visible = false
+		_apply_mobile_touch_bar_visibility()
 		if not silent:
-			_show_msg("雙人：1P WASD、F／Space 採集、Q 武器技、E 衝刺、G 互動；2P 方向鍵／右鍵移動、左鍵採集與點營火／工作台（非建造模式）、P 武器技、L 衝刺、K 互動。兩人主手裝備獨立，請在底面板以「裝1P／裝2P」分配石斧／長槍／鐵劍。")
+			_show_msg("雙人：1P WASD、F／Space 採集、Q 武器技、E 衝刺、G 互動；2P 方向鍵／右鍵移動、左鍵採集與點營火／工作台（非建造模式）、P 武器技、L 衝刺、K 互動。兩人主手裝備獨立，請在底面板以「裝1P／裝2P」分配石斧／長槍／石製短劍。")
 	else:
-		if _mobile_touch_bar:
-			_mobile_touch_bar.visible = true
+		_apply_mobile_touch_bar_visibility()
 		if not silent:
 			_show_msg("單人模式。")
 	if _settings_two_player_check != null and _settings_two_player_check.button_pressed != two_player:
@@ -4446,7 +4729,8 @@ func _try_craft_axe() -> void:
 
 
 func _try_place_campfire_at(world: Vector2) -> bool:
-	if not inv.can_place_campfire():
+	var pools_cf := _build_material_pools()
+	if not GameInventory.pools_can_spend_campfire(pools_cf):
 		_show_msg("資源不足（需 5 木、3 石）。")
 		return false
 	var snap := _grid_snap(world)
@@ -4458,7 +4742,7 @@ func _try_place_campfire_at(world: Vector2) -> bool:
 		if n.is_in_group("campfire") and n.global_position.distance_to(center) < 24.0:
 			_show_msg("這裡太近了。")
 			return false
-	if not inv.spend_campfire():
+	if not GameInventory.pools_try_spend_campfire(pools_cf):
 		_show_msg("資源不足（需 5 木、3 石）。")
 		return false
 	var cf := StaticBody2D.new()
@@ -4491,7 +4775,22 @@ func _pieces_adjacent_on_grid(center_a: Vector2, center_b: Vector2) -> bool:
 	return abs(dx) + abs(dy) == 1
 
 
-func _workbench_adjacent_chest_storages(wb: WorldBuildPiece) -> Array[GameInventory]:
+## 建造扣資源用：玩家背包＋目前區域內所有帶倉儲的箱子（不含製作／工作台鄰接邏輯）。
+func _build_material_pools() -> Array[GameInventory]:
+	var pools: Array[GameInventory] = [inv]
+	for c in entities.get_children():
+		if not (c is WorldBuildPiece):
+			continue
+		var wp := c as WorldBuildPiece
+		if not WorldBuildPiece.piece_kind_has_storage_inventory(wp.piece_kind):
+			continue
+		if wp.chest_storage == null:
+			continue
+		pools.append(wp.chest_storage)
+	return pools
+
+
+func _workbench_adjacent_storage_inventories(wb: WorldBuildPiece) -> Array[GameInventory]:
 	var out: Array[GameInventory] = []
 	if wb == null or not is_instance_valid(wb):
 		return out
@@ -4501,7 +4800,7 @@ func _workbench_adjacent_chest_storages(wb: WorldBuildPiece) -> Array[GameInvent
 		if not (c is WorldBuildPiece):
 			continue
 		var wp := c as WorldBuildPiece
-		if wp.piece_kind != WorldBuildPiece.PieceKind.CHEST:
+		if not WorldBuildPiece.piece_kind_has_storage_inventory(wp.piece_kind):
 			continue
 		if wp.chest_storage == null:
 			continue
@@ -4898,6 +5197,9 @@ func _setup_bottom_hud() -> void:
 	bh.build_chest_pressed.connect(func() -> void: _toggle_build_kind(BuildKind.CHEST))
 	bh.unequip_armor_pressed.connect(_on_hud_unequip_armor)
 	bh.backpack_slot_context_requested.connect(_on_backpack_slot_context_requested)
+	bh.backpack_quick_send_to_chest_requested.connect(_on_backpack_quick_send_to_chest)
+	bh.chest_quick_stash_requested.connect(_on_chest_quick_stash_requested)
+	bh.chest_slot_withdraw_requested.connect(_on_chest_slot_withdraw_requested)
 	bh.backpack_inventory_drag_changed.connect(func() -> void:
 		_update_inv_bar()
 		_autosave_if_ready()
@@ -4915,6 +5217,7 @@ func _on_bottom_hud_minimized(minimized: bool) -> void:
 		_hud_expand_btn.visible = minimized
 	_sync_hotbar_visibility()
 	_relayout_hotbar()
+	_layout_mobile_touch_bar()
 
 
 func _on_hud_equip_axe() -> void:
@@ -4969,18 +5272,18 @@ func _on_hud_equip_spear_p2() -> void:
 
 func _on_hud_equip_sword() -> void:
 	if inv.try_equip_sword_from_inventory():
-		_show_msg("已裝備鐵製短劍（1P）。" if two_player else "已裝備鐵製短劍。")
+		_show_msg("已裝備石製短劍（1P）。" if two_player else "已裝備石製短劍。")
 		_update_inv_bar()
 	else:
-		_show_msg("沒有可裝備的鐵製短劍。")
+		_show_msg("沒有可裝備的石製短劍。")
 
 
 func _on_hud_equip_sword_p2() -> void:
 	if inv.try_equip_sword_from_inventory_for(1):
-		_show_msg("已裝備鐵製短劍（2P）。")
+		_show_msg("已裝備石製短劍（2P）。")
 		_update_inv_bar()
 	else:
-		_show_msg("沒有可裝備的鐵製短劍。")
+		_show_msg("沒有可裝備的石製短劍。")
 
 
 func _on_hud_equip_sticky_armor() -> void:
@@ -5012,6 +5315,7 @@ func _toggle_build_kind(k: BuildKind) -> void:
 	_build_lmb_armed = false
 	_build_lmb_down_ms = -1
 	_update_hud_build_visual()
+	_update_build_grid_preview()
 	if k == BuildKind.FLOOR:
 		_show_msg(
 			"已取消木地板。" if turning_off else "木地板：短按左鍵放開蓋一格並結束模式；長按放開可連蓋至失敗或 Esc。"
@@ -5107,8 +5411,12 @@ func _update_build_grid_preview() -> void:
 	if _build_grid == null:
 		return
 	if not _any_build_placement_mode():
-		_build_grid.enabled = false
+		if _build_grid.enabled or _build_grid.visible:
+			_build_grid.enabled = false
+			_build_grid.visible = false
+			_build_grid.queue_redraw()
 		return
+	_build_grid.visible = true
 	_build_grid.enabled = true
 	var w := get_global_mouse_position()
 	var snap_c := _grid_snap(w) + Vector2.ONE * (GameConstants.GRID_SIZE * 0.5)
@@ -5126,6 +5434,7 @@ func _clear_build_session() -> void:
 	_build_lmb_armed = false
 	_build_lmb_down_ms = -1
 	_update_hud_build_visual()
+	_update_build_grid_preview()
 
 
 func _try_build_or_dismantle_place(world: Vector2) -> bool:
@@ -5224,10 +5533,11 @@ func _try_place_world_piece(kind: WorldBuildPiece.PieceKind, world: Vector2) -> 
 			cost_w = GameConstants.BUILD_CHEST_WOOD
 		_:
 			pass
-	if inv.wood < cost_w:
+	var pools_bp := _build_material_pools()
+	if GameInventory.count_in_pools(pools_bp, &"wood") < cost_w:
 		_show_msg("木材不足。")
 		return false
-	if inv.stone < cost_s:
+	if GameInventory.count_in_pools(pools_bp, &"stone") < cost_s:
 		_show_msg("石頭不足。")
 		return false
 	var snap := _grid_snap(world)
@@ -5239,12 +5549,8 @@ func _try_place_world_piece(kind: WorldBuildPiece.PieceKind, world: Vector2) -> 
 	):
 		_show_msg("不能蓋在這裡。")
 		return false
-	if not inv.try_spend_wood(cost_w):
-		_show_msg("木材不足。")
-		return false
-	if cost_s > 0 and not inv.try_spend_stone(cost_s):
-		_show_msg("石頭不足。")
-		inv.add_wood(cost_w)
+	if not GameInventory.pools_try_spend_build_wood_stone(pools_bp, cost_w, cost_s):
+		_show_msg("木材或石頭不足。")
 		return false
 	var piece := WorldBuildPiece.new()
 	piece.piece_kind = kind
@@ -5257,7 +5563,8 @@ func _try_place_world_piece(kind: WorldBuildPiece.PieceKind, world: Vector2) -> 
 
 
 func _try_place_farmland(world: Vector2) -> bool:
-	if inv.dirt < GameConstants.BUILD_FARMLAND_DIRT:
+	var pools_fm := _build_material_pools()
+	if GameInventory.count_in_pools(pools_fm, &"dirt") < GameConstants.BUILD_FARMLAND_DIRT:
 		_show_msg("土不足。")
 		return false
 	var snap := _grid_snap(world)
@@ -5269,7 +5576,9 @@ func _try_place_farmland(world: Vector2) -> bool:
 	):
 		_show_msg("不能蓋在這裡。")
 		return false
-	if not inv.try_spend_dirt(GameConstants.BUILD_FARMLAND_DIRT):
+	if not GameInventory.remove_from_pools_ordered(
+		pools_fm, &"dirt", GameConstants.BUILD_FARMLAND_DIRT
+	):
 		_show_msg("土不足。")
 		return false
 	var fm := Node2D.new()
@@ -5324,7 +5633,8 @@ func _try_use_water_on_farmland(who: PlayerController) -> void:
 
 
 func _try_place_sapling(world: Vector2) -> bool:
-	if not inv.can_plant_tree():
+	var pools_tr := _build_material_pools()
+	if GameInventory.count_in_pools(pools_tr, &"seed") < GameConstants.PLANT_TREE_SEED_COST:
 		_show_msg("樹種不足。")
 		return false
 	var snap := _grid_snap(world)
@@ -5337,7 +5647,9 @@ func _try_place_sapling(world: Vector2) -> bool:
 		if _is_protected(center) or _spawn_mask_blocks_global_point(center):
 			_show_msg("不能種在這裡。")
 			return false
-		if not inv.try_spend_seed_for_tree():
+		if not GameInventory.remove_from_pools_ordered(
+			pools_tr, &"seed", GameConstants.PLANT_TREE_SEED_COST
+		):
 			_show_msg("樹種不足。")
 			return false
 		if not bool(on_farmland.call("try_plant_crop", game_calendar_doy, &"tree")):
@@ -5358,7 +5670,9 @@ func _try_place_sapling(world: Vector2) -> bool:
 	):
 		_show_msg("不能種在這裡。")
 		return false
-	if not inv.try_spend_seed_for_tree():
+	if not GameInventory.remove_from_pools_ordered(
+		pools_tr, &"seed", GameConstants.PLANT_TREE_SEED_COST
+	):
 		_show_msg("樹種不足。")
 		return false
 	var sap := Node2D.new()
@@ -5373,7 +5687,8 @@ func _try_place_sapling(world: Vector2) -> bool:
 
 
 func _try_place_turnip_on_farmland(world: Vector2) -> bool:
-	if not inv.can_plant_turnip():
+	var pools_tp := _build_material_pools()
+	if GameInventory.count_in_pools(pools_tp, &"turnip_seeds") < 1:
 		_show_msg("沒有蕪菁種子。")
 		return false
 	var snap := _grid_snap(world)
@@ -5388,7 +5703,7 @@ func _try_place_turnip_on_farmland(world: Vector2) -> bool:
 	if _is_protected(center) or _spawn_mask_blocks_global_point(center):
 		_show_msg("不能種在這裡。")
 		return false
-	if not inv.try_consume_one_turnip_seed():
+	if not GameInventory.remove_from_pools_ordered(pools_tp, &"turnip_seeds", 1):
 		_show_msg("沒有蕪菁種子。")
 		return false
 	if not bool(on_farmland.call("try_plant_crop", game_calendar_doy, &"turnip")):
@@ -5403,21 +5718,47 @@ func _try_place_turnip_on_farmland(world: Vector2) -> bool:
 	return true
 
 
+func _dismantle_target_is_wood_floor(n: Node2D) -> bool:
+	if not (n is WorldBuildPiece):
+		return false
+	return (n as WorldBuildPiece).piece_kind == WorldBuildPiece.PieceKind.FLOOR
+
+
+## 拆除範圍內多個目標時：優先非木地板建造物／營火，其次才木地板；同優先級取較近者。
+func _pick_dismantle_target_near(candidates: Array[Node2D], world: Vector2) -> Node2D:
+	var arr: Array[Node2D] = candidates.duplicate()
+	arr.sort_custom(func(a: Node2D, b: Node2D) -> bool:
+		var af := _dismantle_target_is_wood_floor(a)
+		var bf := _dismantle_target_is_wood_floor(b)
+		if af != bf:
+			if af and not bf:
+				return false
+			if not af and bf:
+				return true
+		var da := a.global_position.distance_to(world)
+		var db := b.global_position.distance_to(world)
+		if da != db:
+			return da < db
+		return a.get_instance_id() < b.get_instance_id()
+	)
+	return arr[0]
+
+
 func _try_dismantle_at(world: Vector2) -> bool:
-	var best: Node2D = null
-	var best_d := 56.0
+	var reach := 56.0
+	var candidates: Array[Node2D] = []
 	for c in entities.get_children():
 		if not (c is Node2D):
 			continue
 		if not c.is_in_group("build_piece") and not c.is_in_group("campfire"):
 			continue
-		var d := (c as Node2D).global_position.distance_to(world)
-		if d < best_d:
-			best_d = d
-			best = c as Node2D
-	if best == null:
+		var n2 := c as Node2D
+		if n2.global_position.distance_to(world) < reach:
+			candidates.append(n2)
+	if candidates.is_empty():
 		_show_msg("附近沒有可拆的目標。")
 		return false
+	var best := _pick_dismantle_target_near(candidates, world)
 	if best.is_in_group("campfire"):
 		var ovw := inv.try_add_item(&"wood", GameConstants.CAMPFIRE_WOOD)
 		var ovs := inv.try_add_item(&"stone", GameConstants.CAMPFIRE_STONE)
@@ -5441,7 +5782,7 @@ func _try_dismantle_at(world: Vector2) -> bool:
 	elif best is WorldBuildPiece:
 		var wpb := best as WorldBuildPiece
 		var pk: WorldBuildPiece.PieceKind = wpb.piece_kind
-		if pk == WorldBuildPiece.PieceKind.CHEST and wpb.chest_storage != null:
+		if WorldBuildPiece.piece_kind_has_storage_inventory(pk) and wpb.chest_storage != null:
 			if _bottom_hud != null:
 				_bottom_hud.close_chest_panel()
 			var spilled := false
@@ -5458,7 +5799,7 @@ func _try_dismantle_at(world: Vector2) -> bool:
 				if ov_sp > 0:
 					spilled = true
 			if spilled:
-				_show_msg("背包空間不足，木箱內部分物品未能取回。")
+				_show_msg("背包空間不足，箱子內部分物品未能取回。")
 		var rw := WorldBuildPiece.refund_wood_for_kind(pk)
 		var rs := WorldBuildPiece.refund_stone_for_kind(pk)
 		var owr := inv.try_add_item(&"wood", rw)
@@ -5476,7 +5817,10 @@ func _advance_quest_after_campfire() -> void:
 	if quest_phase == 2:
 		quest_phase = 3
 		_update_quest_ui()
-		_show_msg("邊界將在後續版本開放——先到此為止的序章小成！")
+		_show_msg(
+			"營火完成了！接下來用「木箱」集中木材與石頭：底部「建造」→ 木箱，於空地左鍵放置（木 6）。"
+			+ "任務欄會說明箱子的拖放、一鍵入箱與右鍵取出等用法。"
+		)
 
 
 func on_loose_pickup(p: LoosePickup) -> void:
@@ -5617,7 +5961,7 @@ func try_use_near(who: PlayerController, _player_idx: int) -> void:
 				if dwb < best_d_wb:
 					best_d_wb = dwb
 					best_wb = wp
-			elif wp.piece_kind == WorldBuildPiece.PieceKind.CHEST:
+			elif WorldBuildPiece.piece_kind_has_storage_inventory(wp.piece_kind):
 				var dch := who.global_position.distance_to(wp.global_position)
 				if dch < best_d_ch:
 					best_d_ch = dch
@@ -5757,7 +6101,7 @@ func try_weapon_skill_near(who: PlayerController, player_idx: int) -> void:
 		&"iron_sword":
 			_try_iron_sword_throw_skill(who, player_idx)
 		_:
-			_show_msg("武器技能：請裝備木製長槍或鐵製短劍。")
+			_show_msg("武器技能：請裝備木製長槍或石製短劍。")
 
 
 func _try_wood_spear_whirl_skill(who: PlayerController, player_idx: int) -> void:
@@ -5902,7 +6246,7 @@ func try_harvest_near(who: PlayerController, player_idx: int) -> void:
 		return
 	if best_mob != null:
 		if not inv.equip_main_can_chop_tree_for(player_idx):
-			_show_msg("需要裝備石斧、木製長槍或鐵製短劍才能攻擊野怪。")
+			_show_msg("需要裝備石斧、木製長槍或石製短劍才能攻擊野怪。")
 			return
 		var ivm := _weapon_hit_interval(my_weapon)
 		if ivm > 0.0:
@@ -5964,9 +6308,9 @@ func try_harvest_near(who: PlayerController, player_idx: int) -> void:
 		return
 	if not inv.equip_main_can_chop_tree_for(player_idx):
 		if best.prop_kind == WorldPropStatic.PropKind.TREE:
-			_show_msg("需要裝備石斧、木製長槍或鐵製短劍才能砍樹。")
+			_show_msg("需要裝備石斧、木製長槍或石製短劍才能砍樹。")
 		else:
-			_show_msg("需要裝備石斧、木製長槍或鐵製短劍才能敲碎岩石。")
+			_show_msg("需要裝備石斧、木製長槍或石製短劍才能敲碎岩石。")
 		return
 	var iv := _weapon_hit_interval(my_weapon)
 	if iv > 0.0:
@@ -6032,7 +6376,7 @@ func _show_msg(t: String) -> void:
 func _update_inv_bar() -> void:
 	if _bottom_hud == null:
 		return
-	_bottom_hud.refresh(inv, two_player)
+	_bottom_hud.refresh(inv, two_player, _build_material_pools())
 	_refresh_hotbar_ui()
 	_update_hud_build_visual()
 	if _campfire_cook_popup != null and _campfire_cook_popup.visible:
@@ -6046,22 +6390,57 @@ func _update_inv_bar() -> void:
 	_update_vitals_bars_ui()
 
 
+func _world_has_storage_chest_in_entities() -> bool:
+	for c in entities.get_children():
+		if c is WorldBuildPiece:
+			var wp := c as WorldBuildPiece
+			if WorldBuildPiece.piece_kind_has_storage_inventory(wp.piece_kind):
+				return true
+	return false
+
+
+func _world_has_workbench_in_entities() -> bool:
+	for c in entities.get_children():
+		if c is WorldBuildPiece:
+			var wp := c as WorldBuildPiece
+			if wp.piece_kind == WorldBuildPiece.PieceKind.WORKBENCH:
+				return true
+	return false
+
+
 func _quest_current_bbcode() -> String:
 	if quest_phase == 1:
 		return (
 			"[color=#f4c84a]◎ 目標：製作石斧[/color]\n"
-			+ "撿拾木材與石頭\n"
-			+ "底部 [b]製作[/b] → 石斧（木 3 · 石 2）"
+			+ "[b]石斧[/b]：初階複合工具，用來砍樹、敲碎岩石採石；之後也能改裝長槍／石製短劍作主手。\n"
+			+ "撿拾木材與石頭 → 底部 [b]製作[/b] → 石斧（木 3 · 石 2）"
 		)
 	elif quest_phase == 2:
 		return (
 			"[color=#f4c84a]◎ 目標：放置營火[/color]\n"
-			+ "底部 [b]加工站[/b] → 點「營火」\n"
-			+ "空地 [b]左鍵[/b] 放置（木 5 · 石 3）"
+			+ "[b]營火[/b]：夜晚提供光源與週邊照明；並可在此烹飪（例如莓果乾、烤肉）。\n"
+			+ "底部 [b]加工站[/b] → 點「營火」→ 空地 [b]左鍵[/b] 放置（木 5 · 石 3；本區箱子內材料也可一併扣除）"
+		)
+	elif quest_phase == 3:
+		return (
+			"[color=#f4c84a]◎ 目標：放置木箱[/color]\n"
+			+ "[b]箱子[/b]：把資源集中成堆疊好整理。[b]開箱[/b]時主功能表會自動展開並切到背包，方便拖曳互換。\n"
+			+ "[b]一鍵入箱[/b]：把背包裡「箱內已出現過的種類」併入未滿疊或空格（不會把全新種類硬塞進空位）。\n"
+			+ "[b]箱格右鍵[/b]：堆疊品可選取出數量，單件則直接取回背包。\n"
+			+ "[b]工作台旁[/b]的箱子裡，木材／石頭等也會算進「製作」材料（本階段只要先蓋好一箱即可）。\n"
+			+ "底部 [b]建造[/b] → 木箱 → 空地左鍵（木 6；本區箱子內材料也可一併扣除）"
+		)
+	elif quest_phase == 4:
+		return (
+			"[color=#f4c84a]◎ 目標：放置工作台[/color]\n"
+			+ "[b]工作台[/b]：用來製作各種進階材料與裝備的站台（例如木製長槍、石製短劍）；配方會消耗背包與鄰近一格內箱子裡的材料。\n"
+			+ "靠近工作台按互動鍵開啟製作介面；本區木箱內的木材／石頭也會一併計入花費。\n"
+			+ "底部 [b]建造[/b] → 工作台 → 空地左鍵（木 %d · 石 %d）"
+			% [GameConstants.BUILD_WORKBENCH_WOOD, GameConstants.BUILD_WORKBENCH_STONE]
 		)
 	else:
 		return (
-			"[color=#70dd60]✓ 序章完成！探索世界[/color]\n"
+			"[color=#70dd60]✓ 序章進度：探索鄰近區域[/color]\n"
 			+ "走進土路傳送帶 → 按 [b]G[/b] 確認（雙人 2P 按 K）\n"
 			+ "北 [color=#aad4ff]山麓[/color]  南 [color=#aad4ff]溪谷[/color]  東 [color=#aad4ff]果園[/color]  西 [color=#aad4ff]森林[/color]"
 		)
@@ -6073,7 +6452,22 @@ func _update_quest_ui() -> void:
 		quest_phase = 2
 		_show_msg("太好了！接下來收集木材與石頭，蓋一座營火吧。請用底部面板「加工站」開啟放置營火，再於空地上按左鍵。")
 		if not inv.equip_main_can_chop_tree_for(0):
-			_show_msg("請用底部面板「裝」將石斧裝到主手（或工作台製作的長槍／鐵劍）才能砍樹與採石。")
+			_show_msg("請用底部面板「裝」將石斧裝到主手（或工作台製作的長槍／石製短劍）才能砍樹與採石。")
+	if not _loading_save and quest_phase == 3 and _world_has_storage_chest_in_entities():
+		quest_phase = 4
+		_show_msg(
+			(
+				"木箱已就位！接下來請用底部「建造」放置工作台（木 %d、石 %d）："
+				+ "可在此合成進階裝備與材料，鄰近箱子裡的資源也會算進配方。"
+			)
+			% [GameConstants.BUILD_WORKBENCH_WOOD, GameConstants.BUILD_WORKBENCH_STONE]
+		)
+	if not _loading_save and quest_phase == 4 and _world_has_workbench_in_entities():
+		quest_phase = 5
+		_show_msg(
+			"工作台已就緒！之後可在此製作長槍、石製短劍等。"
+			+ " 接著從土路傳送帶探索周邊區域吧。"
+		)
 	quest_label.text = _quest_current_bbcode()
 	if quest_log_popup.visible:
 		_refresh_quest_log_popup()

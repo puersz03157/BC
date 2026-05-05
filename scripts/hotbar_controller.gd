@@ -193,7 +193,7 @@ func _open_assign_menu(slot: int, screen_pos: Vector2) -> void:
 	var candidates: Array[Array] = [
 		[1, "石斧", inv.has_axe()],
 		[4, "木製長槍", inv.spear_spare > 0 or inv.equip_main == &"wood_spear" or (two_p and inv.equip_main_p2 == &"wood_spear")],
-		[5, "鐵製短劍", inv.sword_spare > 0 or inv.equip_main == &"iron_sword" or (two_p and inv.equip_main_p2 == &"iron_sword")],
+		[5, "石製短劍", inv.sword_spare > 0 or inv.equip_main == &"iron_sword" or (two_p and inv.equip_main_p2 == &"iron_sword")],
 		[2, "莓果", inv.berries > 0],
 		[3, "莓果干", inv.berry_jerky > 0],
 		[6, "肉排", inv.meat_cutlet > 0],
@@ -241,7 +241,7 @@ func _char_skill_hint_one(skill: StringName, charge_ready: bool, iron_rem: float
 		&"dash":
 			return "短衝刺（朝移動方向位移）"
 		&"charge":
-			var t := "蓄力（下次木槍迴旋／鐵劍投擲傷害加倍）"
+			var t := "蓄力（下次木槍迴旋／石短劍投擲傷害加倍）"
 			if charge_ready:
 				t += "·已蓄力"
 			return t
@@ -279,9 +279,9 @@ func _weapon_skill_desc_line(w: StringName) -> String:
 		&"wood_spear":
 			return "木槍：周身迴旋，掃樹／石／野怪；消耗飽足度。"
 		&"iron_sword":
-			return "鐵劍：投擲鎖定最近野怪（較遠）；消耗飽足度。"
+			return "石短劍：投擲鎖定最近野怪（較遠）；消耗飽足度。"
 		_:
-			return "裝備木槍或鐵劍後可施放；有共用冷卻。"
+			return "裝備木槍或石短劍後可施放；有共用冷卻。"
 
 
 func _weapon_skill_short(w: StringName) -> String:
@@ -289,7 +289,7 @@ func _weapon_skill_short(w: StringName) -> String:
 		&"wood_spear":
 			return "木槍"
 		&"iron_sword":
-			return "鐵劍"
+			return "石短劍"
 		&"axe":
 			return "石斧"
 		_:

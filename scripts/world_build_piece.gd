@@ -1,6 +1,6 @@
 class_name WorldBuildPiece
 extends Node2D
-## 木地板（無碰撞，可行走）、木牆（實心方格）、木門（關閉擋人；F 互動開啟可通過）、工作台、木箱。
+## 木地板（無碰撞，可行走）、木牆（實心方格）、木門（關閉擋人；F 互動開啟可通過）、工作台、可開倉儲的箱子類建築。
 
 enum PieceKind { FLOOR, WALL, DOOR, WORKBENCH, CHEST }
 
@@ -8,8 +8,17 @@ const HALF := GameConstants.GRID_SIZE * 0.5
 
 @export var piece_kind: PieceKind = PieceKind.FLOOR
 
-## 僅 `PieceKind.CHEST` 使用；12 格／堆疊 30。
+## 玩家箱子倉儲；凡 `piece_kind_has_storage_inventory(kind)` 為 true 的種類皆使用（目前為木箱，之後可擴充高級箱）。
 var chest_storage: GameInventory = null
+
+
+## 是否為「帶格子倉儲、可走同一套開箱／一鍵入箱／工作台鄰接材料池」的建築。新增箱子種類時在此加入 `PieceKind`。
+static func piece_kind_has_storage_inventory(kind: PieceKind) -> bool:
+	match kind:
+		PieceKind.CHEST:
+			return true
+		_:
+			return false
 
 var door_open: bool = false
 
@@ -20,30 +29,33 @@ var _door_visual: Node2D
 
 func _ready() -> void:
 	add_to_group("build_piece")
-	match piece_kind:
-		PieceKind.FLOOR:
-			z_index = 0
-			_build_floor_art()
-		PieceKind.WALL:
-			z_index = 0
-			_build_wall_art()
-			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
-		PieceKind.DOOR:
-			z_index = 1
-			add_to_group("interactive_door")
-			_build_door_art()
-			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
-		PieceKind.WORKBENCH:
-			z_index = 1
-			add_to_group("workbench")
-			_build_workbench_art()
-			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
-		PieceKind.CHEST:
-			z_index = 1
-			add_to_group("storage_chest")
-			_ensure_chest_storage()
-			_build_chest_art()
-			_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+	if piece_kind_has_storage_inventory(piece_kind):
+		z_index = 1
+		add_to_group("storage_chest")
+		_ensure_chest_storage()
+		_build_storage_art_for_kind(piece_kind)
+		_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+	else:
+		match piece_kind:
+			PieceKind.FLOOR:
+				z_index = 0
+				_build_floor_art()
+			PieceKind.WALL:
+				z_index = 0
+				_build_wall_art()
+				_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+			PieceKind.DOOR:
+				z_index = 1
+				add_to_group("interactive_door")
+				_build_door_art()
+				_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+			PieceKind.WORKBENCH:
+				z_index = 1
+				add_to_group("workbench")
+				_build_workbench_art()
+				_add_solid_collision(GameConstants.GRID_SIZE, GameConstants.GRID_SIZE)
+			_:
+				pass
 	if piece_kind == PieceKind.DOOR and door_open:
 		call_deferred(&"_apply_door_open_state")
 
@@ -164,9 +176,24 @@ func _ensure_chest_storage() -> void:
 	if chest_storage != null:
 		return
 	chest_storage = GameInventory.new()
-	chest_storage.slot_count = GameConstants.CHEST_SLOT_COUNT
-	chest_storage.stack_limit = GameConstants.CHEST_STACK_LIMIT
+	## 新箱子種類若格數／堆疊不同，在此依 `piece_kind` 分支設定。
+	match piece_kind:
+		PieceKind.CHEST:
+			chest_storage.slot_count = GameConstants.CHEST_SLOT_COUNT
+			chest_storage.stack_limit = GameConstants.CHEST_STACK_LIMIT
+		_:
+			chest_storage.slot_count = GameConstants.CHEST_SLOT_COUNT
+			chest_storage.stack_limit = GameConstants.CHEST_STACK_LIMIT
 	chest_storage._ensure_slot_array()
+
+
+func _build_storage_art_for_kind(kind: PieceKind) -> void:
+	match kind:
+		PieceKind.CHEST:
+			_build_chest_art()
+		_:
+			## 新高級箱：在此分支呼叫專用外觀；暫以木箱外觀佔位。
+			_build_chest_art()
 
 
 func _build_chest_art() -> void:
@@ -252,9 +279,9 @@ static func refund_wood_for_kind(k: PieceKind) -> int:
 			return GameConstants.BUILD_DOOR_WOOD
 		PieceKind.WORKBENCH:
 			return GameConstants.BUILD_WORKBENCH_WOOD
-		PieceKind.CHEST:
-			return GameConstants.BUILD_CHEST_WOOD
 		_:
+			if piece_kind_has_storage_inventory(k):
+				return GameConstants.BUILD_CHEST_WOOD
 			return 0
 
 

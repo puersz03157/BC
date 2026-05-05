@@ -71,11 +71,33 @@ func get_slot_snapshot(slot_index: int) -> Dictionary:
 	return {"id": id, "q": q}
 
 
+## 從指定格扣減數量（僅該格）；回傳實際扣下的數量。
+func remove_quantity_from_slot(slot_index: int, quantity: int) -> int:
+	if slot_index < 0 or slot_index >= slots.size() or quantity <= 0:
+		return 0
+	var s: Variant = slots[slot_index]
+	if s == null or not s is Dictionary:
+		return 0
+	var d := s as Dictionary
+	var fid: StringName = StringName(d.get("id", &""))
+	var fq := int(d.get("q", 0))
+	if fid == &"" or fq <= 0:
+		return 0
+	var rm := mini(quantity, fq)
+	fq -= rm
+	if fq <= 0:
+		slots[slot_index] = null
+	else:
+		d["q"] = fq
+		slots[slot_index] = d
+	return rm
+
+
 func item_count(id: StringName) -> int:
 	return _item_count(id)
 
 
-## 多個倉儲加總某材料數量（[玩家背包, 木箱, …]）。
+## 多個倉儲加總某材料數量（[玩家背包, 地上箱子, …]）。
 static func count_in_pools(pools: Array[GameInventory], id: StringName) -> int:
 	var n := 0
 	for p in pools:
@@ -105,6 +127,42 @@ static func refund_to_inventory(inv: GameInventory, id: StringName, amount: int)
 	if inv == null or amount <= 0:
 		return
 	inv.try_add_item(id, amount)
+
+
+## 建造用：營火材料是否足夠（背包＋本區所有箱子格位加總）。
+static func pools_can_spend_campfire(pools: Array[GameInventory]) -> bool:
+	return (
+		count_in_pools(pools, &"wood") >= GameConstants.CAMPFIRE_WOOD
+		and count_in_pools(pools, &"stone") >= GameConstants.CAMPFIRE_STONE
+	)
+
+
+## 建造用：從 pools 依序扣營火材料；失敗時已扣的木頭會退回 `pools[0]`（玩家背包）。
+static func pools_try_spend_campfire(pools: Array[GameInventory]) -> bool:
+	if not pools_can_spend_campfire(pools):
+		return false
+	if not remove_from_pools_ordered(pools, &"wood", GameConstants.CAMPFIRE_WOOD):
+		return false
+	if not remove_from_pools_ordered(pools, &"stone", GameConstants.CAMPFIRE_STONE):
+		if pools.size() > 0 and pools[0] != null:
+			refund_to_inventory(pools[0], &"wood", GameConstants.CAMPFIRE_WOOD)
+		return false
+	return true
+
+
+## 建造用：扣木材／石頭；石頭扣失敗時退回已扣木材至 `pools[0]`。
+static func pools_try_spend_build_wood_stone(
+	pools: Array[GameInventory], cost_w: int, cost_s: int
+) -> bool:
+	if cost_w < 0 or cost_s < 0:
+		return false
+	if cost_w > 0 and not remove_from_pools_ordered(pools, &"wood", cost_w):
+		return false
+	if cost_s > 0 and not remove_from_pools_ordered(pools, &"stone", cost_s):
+		if cost_w > 0 and pools.size() > 0 and pools[0] != null:
+			refund_to_inventory(pools[0], &"wood", cost_w)
+		return false
+	return true
 
 
 ## 非玩家背包的儲物：只存格位（存檔用，不含裝備欄位）。

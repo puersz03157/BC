@@ -64,7 +64,7 @@ const BUILD_FENCE_WOOD := 2
 const BUILD_DOOR_WOOD := 3
 const BUILD_WORKBENCH_WOOD := 8
 const BUILD_WORKBENCH_STONE := 4
-## 木箱：12 格、堆疊 30（與一般背包格堆疊一致時仍獨立於箱子上限）。
+## 預設箱子倉儲：12 格、堆疊 30（木箱與未另設之箱子種類共用；高級箱可於程式內覆寫）。
 const CHEST_SLOT_COUNT := 12
 const CHEST_STACK_LIMIT := 30
 const BUILD_CHEST_WOOD := 6
@@ -81,12 +81,12 @@ const WEAPON_SPEAR_RANGE_MULT := 1.48
 const WEAPON_SPEAR_HIT_INTERVAL := 0.58
 const WEAPON_SWORD_RANGE_MULT := 0.92
 const WEAPON_SWORD_HIT_INTERVAL := 0.26
-## 武器技能：共用冷卻（秒）；木槍圓形 AOE／鐵劍投擲。
+## 武器技能：共用冷卻（秒）；木槍圓形 AOE／石短劍投擲。
 const WEAPON_SKILL_COOLDOWN := 1.45
 ## 使用技能消耗的飽足度（主手為該武器時才可施放）。
 const WEAPON_SKILL_SATIETY_SPEAR := 15.0
 const WEAPON_SKILL_SATIETY_IRON_SWORD := 13.0
-## 鐵劍投擲鎖定最遠距離＝（木槍有效採集距離）× 此倍率。
+## 石短劍投擲鎖定最遠距離＝（木槍有效採集距離）× 此倍率。
 const WEAPON_THROW_LOCK_RANGE_MULT := 1.5
 
 ## 翠幽之森（西區）野怪數量（上限）；每過一個遊戲日曆日補少量，多日離線不會超過此上限。

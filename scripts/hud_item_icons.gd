@@ -1,7 +1,7 @@
 class_name HudItemIcons
 extends RefCounted
 ## 底部 HUD 道具圖示路徑集中於此。補圖時可覆寫同路徑檔案，或改常數指向新檔（建議仍放 `assets/ui/hud_icons/`）。
-## 技能 PNG：`skill_character_dash.png`（E 角色技）、`skill_weapon_spear_whirl.png`（木槍 Q）、`skill_weapon_daggers_strip.png`（直向三格：上＝鐵劍 Q、中＝預設、下＝石斧 Q）。
+## 技能 PNG：`skill_character_dash.png`（E 角色技）、`skill_weapon_spear_whirl.png`（木槍 Q）、`skill_weapon_daggers_strip.png`（直向三格：上＝石短劍 Q、中＝預設、下＝石斧 Q）。
 ## 目前檔名：wood.svg, stone.svg, seed.svg, water.svg, dirt.svg, turnip*.png, main_empty.svg, axe.svg, wood_spear.svg, iron_sword.svg,
 ## offhand_none.svg, armor_default.svg, accessory_none.svg, campfire.svg, workbench.svg, floor.svg,
 ## fence.svg, door.svg, dismantle.svg, _generic.svg（可當未分類道具預設圖）。
@@ -50,7 +50,7 @@ const CHARACTER_CHARGE := DIR + "skill_charge.png"
 const CHARACTER_IRON_WALL := DIR + "skill_iron_wall.png"
 ## 木槍武器技（迴旋）PNG。
 const SKILL_SPEAR_WHIRL := DIR + "skill_weapon_spear_whirl.png"
-## 直向三格匕首條：鐵劍技用上格、預設／石斧用下格、中格備用。
+## 直向三格匕首條：石短劍技用上格、預設／石斧用下格、中格備用。
 const SKILL_DAGGERS_STRIP := DIR + "skill_weapon_daggers_strip.png"
 
 static var _dagger_strip_slices: Array[Texture2D] = []
@@ -207,7 +207,7 @@ static func stackable_display_name_zh(id: StringName) -> String:
 		&"spear_spare":
 			return "木製長槍（備用）"
 		&"sword_spare":
-			return "鐵製短劍（備用）"
+			return "石製短劍（備用）"
 		&"sticky_armor_spare":
 			return "黏黏護甲（備用）"
 		_:

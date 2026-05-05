@@ -1,6 +1,6 @@
 class_name SwordThrowProjectile
 extends Node2D
-## 鐵劍投擲飛行物；抵達時對目標造成技能傷害。
+## 石短劍投擲飛行物；抵達時對目標造成技能傷害。
 
 var _from: Vector2
 var _to: Vector2

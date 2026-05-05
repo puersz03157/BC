@@ -18,10 +18,16 @@ signal plant_turnip_pressed
 signal unequip_armor_pressed
 ## 背包格右鍵：由 Main 開選單（裝備／指派快捷鍵）。
 signal backpack_slot_context_requested(slot_index: int, screen_pos: Vector2)
+## 箱子倉儲面板開著時背包格右鍵：直接整組送入該箱子，不開選單。
+signal backpack_quick_send_to_chest_requested(slot_index: int)
 ## 背包拖曳合併／換格後（供 Main 刷新與存檔）。
 signal backpack_inventory_drag_changed
-## 木箱拖曳或與背包互換後。
+## 箱子倉儲拖曳或與背包互換後。
 signal chest_inventory_changed
+## 箱子面板「一鍵入箱」：背包中「箱內已有種類」盡量併疊或移入箱內空格。
+signal chest_quick_stash_requested
+## 箱子格右鍵：請 Main 將物品取回背包（單件直接取；堆疊則由 Main 開數量選擇）。
+signal chest_slot_withdraw_requested(slot_index: int, screen_pos: Vector2)
 
 const COL_BG := Color(0.1725, 0.2431, 0.3137, 0.82)
 const COL_PANEL := Color(0.125, 0.18, 0.24, 0.78)
@@ -65,9 +71,12 @@ var _inv_slot_dots: Array[Label] = []
 var _inv_drag_from: int = -1
 var _inv_ref: GameInventory = null
 var _two_player_ref: bool = false
-## 木箱 UI
+## 上次 refresh 傳入的建造材料池（拖曳中途只帶兩參數 refresh 時沿用，避免建造鈕誤判為僅背包）。
+var _cached_build_resource_pools: Array[GameInventory] = []
+## 可開倉儲的箱子 UI（木箱與之後各種箱子共用 overlay）。
 var _chest_root: Control = null
 var _chest_inv_ref: GameInventory = null
+var _chest_overlay_title: Label = null
 var _chest_drag_from: int = -1
 var _chest_slot_cells: Array[PanelContainer] = []
 var _chest_slot_icons: Array[TextureRect] = []
@@ -76,6 +85,14 @@ var _chest_slot_sb_base: Array[StyleBoxFlat] = []
 var _chest_slot_sb_hover: Array[StyleBoxFlat] = []
 var _chest_slot_dots: Array[Label] = []
 var _btn_chest: Button = null
+## 箱子倉儲全螢幕遮罩改掛到此節點（通常為 CanvasLayer/UI），否則只會蓋在底部 InvBar 區域內。
+var _chest_overlay_host: Control = null
+## 拖曳時跟隨游標的道具預覽（獨立 CanvasLayer，不擋點擊）。
+var _drag_ghost_layer: CanvasLayer = null
+var _drag_ghost_root: PanelContainer = null
+var _drag_ghost_icon: TextureRect = null
+var _drag_ghost_qty: Label = null
+var _drag_ghost_half := Vector2(30.0, 28.0)
 var _ico_armor: TextureRect
 var _btn_unequip_armor: Button
 var _btn_craft_axe: Button
@@ -109,11 +126,143 @@ func bind_dismantle_glow_button(btn: Button) -> void:
 	_dismantle_glow_btn = btn
 
 
+## 由 Main 在建立底部 HUD 後呼叫，讓箱子倉儲彈窗覆蓋整個 UI 區而非僅底欄。
+func configure_chest_overlay_host(host: Control) -> void:
+	_chest_overlay_host = host
+	_rehome_chest_overlay_if_needed()
+
+
+func _rehome_chest_overlay_if_needed() -> void:
+	if _chest_root == null or _chest_overlay_host == null:
+		return
+	if _chest_root.get_parent() == _chest_overlay_host:
+		return
+	if _chest_root.get_parent() != null:
+		_chest_root.get_parent().remove_child(_chest_root)
+	_chest_overlay_host.add_child(_chest_root)
+	_chest_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_chest_root.offset_left = 0.0
+	_chest_root.offset_top = 0.0
+	_chest_root.offset_right = 0.0
+	_chest_root.offset_bottom = 0.0
+	_chest_root.z_index = 160
+	## IGNORE：不攔截背包／底欄；僅箱子面板與格子為 STOP。
+	_chest_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func has_inventory_drag_active() -> bool:
+	return _inv_drag_from >= 0 or _chest_drag_from >= 0
+
+
+func get_open_chest_inventory() -> GameInventory:
+	return _chest_inv_ref if is_chest_panel_open() else null
+
+
+func _ensure_drag_ghost_layer() -> void:
+	if _drag_ghost_layer != null:
+		return
+	var lyr := CanvasLayer.new()
+	lyr.name = "InventoryDragGhostLayer"
+	lyr.layer = 250
+	get_tree().root.add_child(lyr)
+	var root := PanelContainer.new()
+	root.name = "DragGhost"
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.visible = false
+	root.custom_minimum_size = Vector2(60, 52)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.10, 0.14, 0.20, 0.82)
+	sb.set_corner_radius_all(8)
+	sb.set_border_width_all(2)
+	sb.border_color = Color(0.55, 0.72, 0.95, 0.55)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	sb.content_margin_top = 5
+	sb.content_margin_bottom = 5
+	root.add_theme_stylebox_override("panel", sb)
+	var hb := HBoxContainer.new()
+	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_theme_constant_override("separation", 4)
+	var ic := TextureRect.new()
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ic.custom_minimum_size = Vector2(36, 36)
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	var ql := Label.new()
+	ql.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ql.add_theme_font_size_override("font_size", 12)
+	ql.add_theme_color_override("font_color", Color(0.92, 0.95, 1.0, 1.0))
+	hb.add_child(ic)
+	hb.add_child(ql)
+	root.add_child(hb)
+	lyr.add_child(root)
+	_drag_ghost_layer = lyr
+	_drag_ghost_root = root
+	_drag_ghost_icon = ic
+	_drag_ghost_qty = ql
+
+
+func _begin_drag_ghost_from_inventory(inv: GameInventory, slot_idx: int) -> void:
+	if inv == null:
+		return
+	var snap := inv.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return
+	_ensure_drag_ghost_layer()
+	var idv: Variant = snap.get("id", &"")
+	var sid: StringName = idv as StringName if idv is StringName else StringName(str(idv))
+	var q := int(snap.get("q", 0))
+	_drag_ghost_icon.texture = HudItemIcons.tex(HudItemIcons.stackable_icon_path(sid))
+	_drag_ghost_icon.modulate = Color.WHITE
+	if q > 1:
+		_drag_ghost_qty.text = str(q)
+		_drag_ghost_qty.visible = true
+	else:
+		_drag_ghost_qty.text = ""
+		_drag_ghost_qty.visible = false
+	_drag_ghost_root.custom_minimum_size = Vector2(58, 50) if q <= 1 else Vector2(74, 50)
+	_drag_ghost_half = _drag_ghost_root.custom_minimum_size * 0.5
+	_drag_ghost_root.visible = true
+	var vpm := get_viewport().get_mouse_position()
+	_drag_ghost_root.position = vpm - _drag_ghost_half
+	set_process(true)
+
+
+func _hide_drag_ghost() -> void:
+	if _drag_ghost_root != null and is_instance_valid(_drag_ghost_root):
+		_drag_ghost_root.visible = false
+	set_process(false)
+
+
+func _input(event: InputEvent) -> void:
+	## 與背包同層處理，確保滑鼠放開在箱子格上時能完成拖曳（不依賴 Main 節點順序）。
+	handle_backpack_drag_mouse_global(event)
+
+
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	add_theme_stylebox_override("panel", _panel_style(COL_BG))
 	_build()
+	set_process(false)
+
+
+func _exit_tree() -> void:
+	if _drag_ghost_layer != null and is_instance_valid(_drag_ghost_layer):
+		_drag_ghost_layer.queue_free()
+	_drag_ghost_layer = null
+	_drag_ghost_root = null
+	_drag_ghost_icon = null
+	_drag_ghost_qty = null
+
+
+func _process(_delta: float) -> void:
+	if _drag_ghost_root == null or not _drag_ghost_root.visible:
+		return
+	if not has_inventory_drag_active():
+		return
+	var vpm := get_viewport().get_mouse_position()
+	_drag_ghost_root.position = vpm - _drag_ghost_half
 
 
 func _panel_style(bg: Color) -> StyleBoxFlat:
@@ -154,6 +303,21 @@ func _btn_style(filled: Color) -> StyleBoxFlat:
 
 func is_hud_minimized() -> bool:
 	return _hud_minimized
+
+
+## 展開主功能表（若目前為收合）並切到指定分頁：0 裝備、1 背包、2 製作、3 建造。
+func expand_hud_and_switch_tab(tab_index: int) -> void:
+	if _hud_minimized:
+		_hud_minimized = false
+		if is_instance_valid(_main_body):
+			_main_body.visible = true
+		if is_instance_valid(_btn_hud_toggle):
+			_btn_hud_toggle.text = "▼ 收合"
+		hud_minimized_changed.emit(_hud_minimized)
+	if _tab_panels.is_empty():
+		return
+	var i := clampi(tab_index, 0, _tab_panels.size() - 1)
+	_switch_tab(i)
 
 
 func _toggle_hud_minimize() -> void:
@@ -574,35 +738,54 @@ func _build_chest_overlay() -> void:
 	_chest_root = Control.new()
 	_chest_root.name = "ChestOverlay"
 	_chest_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_chest_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	_chest_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chest_root.visible = false
 	_chest_root.z_index = 80
 	add_child(_chest_root)
 	var dim := ColorRect.new()
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.color = Color(0, 0, 0, 0.42)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(_on_chest_dim_gui_input)
+	## 僅視覺暗角；若可點會穿透到底層而誤觸「關閉」。
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chest_root.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chest_root.add_child(center)
+	var host := Control.new()
+	host.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	host.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chest_root.add_child(host)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(460, 240)
+	panel.custom_minimum_size = Vector2(460, 248)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 0.0
+	panel.anchor_bottom = 0.0
+	panel.offset_left = -230.0
+	panel.offset_right = 230.0
+	panel.offset_top = 44.0
+	panel.offset_bottom = 44.0 + 248.0
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.add_theme_stylebox_override("panel", _panel_style(COL_PANEL))
-	center.add_child(panel)
+	host.add_child(panel)
 	var vb := VBoxContainer.new()
 	vb.add_theme_constant_override("separation", 8)
 	panel.add_child(vb)
 	var hdr := HBoxContainer.new()
 	var ht := Label.new()
-	ht.text = "木箱（12 格 · 堆疊 30）"
+	_chest_overlay_title = ht
+	ht.text = "箱子"
 	ht.add_theme_font_size_override("font_size", 14)
 	ht.add_theme_color_override("font_color", COL_HEADER_YELLOW)
 	ht.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hdr.add_child(ht)
+	var stash_btn := Button.new()
+	stash_btn.text = "一鍵入箱"
+	stash_btn.flat = true
+	stash_btn.focus_mode = Control.FOCUS_NONE
+	stash_btn.add_theme_font_size_override("font_size", 12)
+	stash_btn.add_theme_color_override("font_color", COL_HEADER_BLUE)
+	stash_btn.custom_minimum_size = Vector2(88, 28)
+	stash_btn.pressed.connect(func() -> void: chest_quick_stash_requested.emit())
+	hdr.add_child(stash_btn)
 	var bx := Button.new()
 	bx.text = "✕"
 	bx.flat = true
@@ -674,22 +857,27 @@ func _build_chest_overlay() -> void:
 	vb.add_child(slot_grid)
 
 
-func _on_chest_dim_gui_input(ev: InputEvent) -> void:
-	if ev is InputEventMouseButton:
-		var mb := ev as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			close_chest_panel()
-
-
 func open_chest_panel(inv: GameInventory) -> void:
 	_chest_inv_ref = inv
+	_rehome_chest_overlay_if_needed()
+	if inv != null and inv.slot_count > _chest_slot_cells.size():
+		push_warning(
+			"BottomHud: 倉儲格數 %d 超過面板上限 %d，多出的格無法在此操作。"
+			% [inv.slot_count, _chest_slot_cells.size()]
+		)
+	if is_instance_valid(_chest_overlay_title) and inv != null:
+		_chest_overlay_title.text = "箱子（%d 格 · 堆疊 %d）" % [inv.slot_count, inv.stack_limit]
 	if _chest_root != null:
 		_chest_root.visible = true
 	_refresh_chest_slots()
+	# 開箱時自動展開底欄主功能表並切到背包，方便與箱子互動／一鍵入箱。
+	expand_hud_and_switch_tab(1)
 
 
 func close_chest_panel() -> void:
 	_chest_drag_from = -1
+	_inv_drag_from = -1
+	_hide_drag_ghost()
 	_chest_inv_ref = null
 	if _chest_root != null:
 		_chest_root.visible = false
@@ -708,9 +896,31 @@ func _refresh_chest_slots() -> void:
 	var _COL_SLOT_FULL_BG := Color(0.14, 0.20, 0.30, 0.96)
 	var _COL_SLOT_FULL_BDR := Color(0.45, 0.65, 0.90, 0.85)
 	var _COL_SLOT_HOVER_BDR := Color(0.65, 0.82, 1.00, 0.95)
-	for si in GameConstants.CHEST_SLOT_COUNT:
-		if si >= _chest_slot_icons.size():
-			break
+	for si in _chest_slot_icons.size():
+		if si >= inv.slot_count:
+			if si < _chest_slot_cells.size():
+				_chest_slot_cells[si].mouse_filter = Control.MOUSE_FILTER_IGNORE
+				_chest_slot_cells[si].tooltip_text = ""
+			var ic_off: TextureRect = _chest_slot_icons[si]
+			var ql_off: Label = _chest_slot_qty[si]
+			var dot_off: Label = _chest_slot_dots[si]
+			ic_off.texture = HudItemIcons.tex(HudItemIcons.GENERIC)
+			ic_off.modulate = Color(1, 1, 1, 0)
+			ql_off.visible = false
+			dot_off.visible = false
+			if si < _chest_slot_sb_base.size():
+				var sb0 := _chest_slot_sb_base[si]
+				sb0.bg_color = _COL_SLOT_EMPTY_BG
+				sb0.border_color = _COL_SLOT_EMPTY_BDR
+				sb0.set_border_width_all(2)
+			if si < _chest_slot_sb_hover.size():
+				var sbh0 := _chest_slot_sb_hover[si]
+				sbh0.bg_color = _COL_SLOT_EMPTY_BG.lightened(0.08)
+				sbh0.border_color = _COL_SLOT_HOVER_BDR
+				sbh0.set_border_width_all(2)
+			continue
+		if si < _chest_slot_cells.size():
+			_chest_slot_cells[si].mouse_filter = Control.MOUSE_FILTER_STOP
 		var snap := inv.get_slot_snapshot(si)
 		var sid_slot: StringName = &""
 		if not snap.is_empty():
@@ -766,7 +976,9 @@ func _chest_slot_set_hover_style(slot_idx: int, hover: bool) -> void:
 func _chest_slot_index_at_global(global_pos: Vector2) -> int:
 	if _chest_root == null or not _chest_root.visible or _chest_inv_ref == null:
 		return -1
-	for si in mini(_chest_slot_cells.size(), GameConstants.CHEST_SLOT_COUNT):
+	var cap: int = mini(_chest_slot_cells.size(), GameConstants.CHEST_SLOT_COUNT)
+	cap = mini(cap, _chest_inv_ref.slot_count)
+	for si in cap:
 		if _chest_slot_cells[si].get_global_rect().has_point(global_pos):
 			return si
 	return -1
@@ -775,14 +987,24 @@ func _chest_slot_index_at_global(global_pos: Vector2) -> int:
 func _on_chest_slot_gui_input(slot_idx: int, ev: InputEvent) -> void:
 	if ev is InputEventMouseButton:
 		var mb := ev as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			if _chest_inv_ref == null:
-				return
-			var snap := _chest_inv_ref.get_slot_snapshot(slot_idx)
-			if snap.is_empty():
-				return
+		if not mb.pressed:
+			return
+		if _chest_inv_ref == null:
+			return
+		if slot_idx < 0 or slot_idx >= _chest_inv_ref.slot_count:
+			return
+		var snap := _chest_inv_ref.get_slot_snapshot(slot_idx)
+		if snap.is_empty():
+			return
+		if mb.button_index == MOUSE_BUTTON_LEFT:
 			_chest_drag_from = slot_idx
 			_inv_drag_from = -1
+			_begin_drag_ghost_from_inventory(_chest_inv_ref, slot_idx)
+		elif mb.button_index == MOUSE_BUTTON_RIGHT:
+			if _inv_ref == null:
+				return
+			chest_slot_withdraw_requested.emit(slot_idx, mb.global_position)
+			get_viewport().set_input_as_handled()
 
 
 func _inv_slot_set_hover_style(slot_idx: int, hover: bool) -> void:
@@ -807,7 +1029,7 @@ func _inv_slot_index_at_global(global_pos: Vector2) -> int:
 	return -1
 
 
-## 由 Main._input 呼叫：滑鼠放開完成拖曳（背包／木箱互換或各自格內）。
+## 由本節點 `_input` 處理：滑鼠放開完成拖曳（背包／箱子倉儲互換或各自格內）。
 func handle_backpack_drag_mouse_global(event: InputEvent) -> void:
 	if _inv_drag_from < 0 and _chest_drag_from < 0:
 		return
@@ -836,6 +1058,7 @@ func handle_backpack_drag_mouse_global(event: InputEvent) -> void:
 			applied = _chest_inv_ref.apply_backpack_slot_drag(_chest_drag_from, to_ch)
 	_inv_drag_from = -1
 	_chest_drag_from = -1
+	_hide_drag_ghost()
 	if applied:
 		backpack_inventory_drag_changed.emit()
 		chest_inventory_changed.emit()
@@ -850,6 +1073,12 @@ func _on_backpack_slot_gui_input(slot_idx: int, ev: InputEvent) -> void:
 	if ev is InputEventMouseButton:
 		var mb := ev as InputEventMouseButton
 		if mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			if is_chest_panel_open() and _inv_ref != null and _chest_inv_ref != null:
+				var snap_r := _inv_ref.get_slot_snapshot(slot_idx)
+				if not snap_r.is_empty():
+					backpack_quick_send_to_chest_requested.emit(slot_idx)
+					get_viewport().set_input_as_handled()
+					return
 			backpack_slot_context_requested.emit(slot_idx, mb.global_position)
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
@@ -860,6 +1089,7 @@ func _on_backpack_slot_gui_input(slot_idx: int, ev: InputEvent) -> void:
 				return
 			_inv_drag_from = slot_idx
 			_chest_drag_from = -1
+			_begin_drag_ghost_from_inventory(_inv_ref, slot_idx)
 
 
 func _resource_grid() -> GridContainer:
@@ -1075,7 +1305,7 @@ func _main_hand_label_text(w: StringName) -> String:
 		&"wood_spear":
 			return "木製長槍"
 		&"iron_sword":
-			return "鐵製短劍"
+			return "石製短劍"
 		_:
 			return "無"
 
@@ -1092,11 +1322,23 @@ func _main_hand_icon_path(w: StringName) -> String:
 			return HudItemIcons.MAIN_EMPTY
 
 
-func refresh(inv: GameInventory, two_player: bool = false) -> void:
+func refresh(inv: GameInventory, two_player: bool = false, build_resource_pools: Array[GameInventory] = []) -> void:
 	if _lbl_main == null:
 		return
 	_inv_ref = inv
 	_two_player_ref = two_player
+	if not build_resource_pools.is_empty():
+		_cached_build_resource_pools = build_resource_pools.duplicate()
+	var build_pools: Array[GameInventory] = build_resource_pools
+	if build_pools.is_empty() and not _cached_build_resource_pools.is_empty():
+		build_pools = _cached_build_resource_pools
+	if build_pools.is_empty():
+		build_pools = [inv]
+	var wood_b := GameInventory.count_in_pools(build_pools, &"wood")
+	var stone_b := GameInventory.count_in_pools(build_pools, &"stone")
+	var dirt_b := GameInventory.count_in_pools(build_pools, &"dirt")
+	var seed_b := GameInventory.count_in_pools(build_pools, &"seed")
+	var turnip_seed_b := GameInventory.count_in_pools(build_pools, &"turnip_seeds")
 	if _row_p2_equip != null:
 		_row_p2_equip.visible = two_player
 	if _hdr_1p_main != null:
@@ -1205,23 +1447,23 @@ func refresh(inv: GameInventory, two_player: bool = false) -> void:
 			_lbl_craft_axe_state.visible = true
 		else:
 			_lbl_craft_axe_state.visible = false
-	_btn_campfire.disabled = not inv.can_place_campfire()
-	_btn_floor.disabled = inv.wood < GameConstants.BUILD_FLOOR_WOOD
-	_btn_fence.disabled = inv.wood < GameConstants.BUILD_FENCE_WOOD
-	_btn_door.disabled = inv.wood < GameConstants.BUILD_DOOR_WOOD
+	_btn_campfire.disabled = not GameInventory.pools_can_spend_campfire(build_pools)
+	_btn_floor.disabled = wood_b < GameConstants.BUILD_FLOOR_WOOD
+	_btn_fence.disabled = wood_b < GameConstants.BUILD_FENCE_WOOD
+	_btn_door.disabled = wood_b < GameConstants.BUILD_DOOR_WOOD
 	if _btn_farmland != null:
-		_btn_farmland.disabled = inv.dirt < GameConstants.BUILD_FARMLAND_DIRT
-	_btn_plant_tree.disabled = not inv.can_plant_tree()
+		_btn_farmland.disabled = dirt_b < GameConstants.BUILD_FARMLAND_DIRT
+	_btn_plant_tree.disabled = seed_b < GameConstants.PLANT_TREE_SEED_COST
 	if _btn_plant_turnip != null:
-		_btn_plant_turnip.disabled = not inv.can_plant_turnip()
+		_btn_plant_turnip.disabled = turnip_seed_b < 1
 	var can_wb := (
-		inv.wood >= GameConstants.BUILD_WORKBENCH_WOOD
-		and inv.stone >= GameConstants.BUILD_WORKBENCH_STONE
+		wood_b >= GameConstants.BUILD_WORKBENCH_WOOD
+		and stone_b >= GameConstants.BUILD_WORKBENCH_STONE
 	)
 	if _btn_workbench != null:
 		_btn_workbench.disabled = not can_wb
 	if _btn_chest != null:
-		_btn_chest.disabled = inv.wood < GameConstants.BUILD_CHEST_WOOD
+		_btn_chest.disabled = wood_b < GameConstants.BUILD_CHEST_WOOD
 	if is_chest_panel_open():
 		_refresh_chest_slots()
 
