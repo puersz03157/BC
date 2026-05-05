@@ -460,6 +460,11 @@ func _load_tiled_map_from_path(path: String) -> bool:
 	if backdrop:
 		backdrop.visible = false
 	_apply_tiled_map_layer_z_order(map_root)
+	## YATI 對動畫磚的處理：地圖存的是「動畫幀 atlas 座標」（如 (7,0)），
+	## 但 Godot TileSetAtlasSource 只認識「基底 atlas 座標」（如 (1,0)）。
+	## 幀座標 set_cell 後 Godot 找不到對應 tile → 磁磚不顯示。
+	## 此函式把所有幀座標修正為基底座標，讓動畫磚（水域等）正確渲染。
+	_fix_animated_tile_atlas_coords(map_root)
 	## TileSet 的 physics_layer_0（來自 TSX objectgroup，如 TallGrass、Sand）預設 collision_layer=1 會擋玩家。
 	## 水域 / 陡坡碰撞已由 StaticBody2D 程式生成，所有 TileMapLayer 本身的碰撞都要清除。
 	_disable_tilemap_layer_physics(map_root)
@@ -827,6 +832,50 @@ func _apply_tiled_map_layer_z_order(root: Node) -> void:
 				layer.z_as_relative = true
 		elif c.get_child_count() > 0:
 			_apply_tiled_map_layer_z_order(c)
+
+
+## YATI 動畫磚 atlas 座標修正。
+## 問題：Tileset_Water.tsx 的水域磁磚都是動畫磚（4 幀，水平排列）。
+##       Tiled 把第 N 幀的 local ID 存進地圖資料，YATI 直接轉換成對應的 atlas 座標
+##       （例如 local_id=7 → atlas(7,0)）。但 Godot 的 TileSetAtlasSource 只有
+##       「基底磁磚」的記錄（如 atlas(1,0)）；幀位置不是獨立的 base tile，
+##       set_cell 以幀座標存入後，TileMapLayer 找不到對應磁磚 → 透明不顯示。
+## 修正：遍歷所有 TileMapLayer，對每個格子檢查其 atlas_coords 是否為合法基底磚
+##       （has_tile()）；若否，呼叫 get_tile_at_coords() 取得擁有該位置的基底磚座標，
+##       再以基底座標重新 set_cell。Godot 將自動播放動畫。
+func _fix_animated_tile_atlas_coords(root: Node) -> void:
+	for c in root.get_children():
+		if c is TileMapLayer:
+			var layer := c as TileMapLayer
+			var ts := layer.tile_set
+			if ts == null:
+				continue
+			var remapped := 0
+			for cell: Vector2i in layer.get_used_cells():
+				var src_id := layer.get_cell_source_id(cell)
+				if src_id < 0:
+					continue
+				if not ts.has_source(src_id):
+					continue
+				var src := ts.get_source(src_id)
+				if not src is TileSetAtlasSource:
+					continue
+				var atlas_src := src as TileSetAtlasSource
+				var coords := layer.get_cell_atlas_coords(cell)
+				## 如果這個座標已是合法基底磚，不需要修正
+				if atlas_src.has_tile(coords):
+					continue
+				## 找出擁有此位置的基底磚（通常是動畫幀所屬的基底 tile）
+				var base := atlas_src.get_tile_at_coords(coords)
+				if base == Vector2i(-1, -1):
+					continue
+				var alt := layer.get_cell_alternative_tile(cell)
+				layer.set_cell(cell, src_id, base, alt)
+				remapped += 1
+			if remapped > 0:
+				print("Main: [%s] 修正 %d 格動畫磚幀座標 → 基底座標" % [c.name, remapped])
+		elif c.get_child_count() > 0:
+			_fix_animated_tile_atlas_coords(c)
 
 
 ## Tiled 的「Water」圖層通常沒有物理；為每格補 StaticBody2D（layer 1），與邊界／樹一致。
@@ -3525,11 +3574,48 @@ func _on_backpack_slot_context_requested(slot_idx: int, screen_pos: Vector2) -> 
 			m.add_separator()
 		for hi in 9:
 			m.add_item("設為快捷鍵 %d" % (hi + 1), 300 + hi)
+	if _bottom_hud != null and _bottom_hud.is_chest_panel_open():
+		if m.item_count > 0:
+			m.add_separator()
+		m.add_item("放入木箱", 400)
 	if m.item_count == 0:
-		_show_msg("此格道具無法裝備或設快捷鍵。")
+		_show_msg("此格道具無法裝備、設快捷鍵或放入木箱。")
 		_backpack_ctx_slot = -1
 		return
 	m.popup(Rect2(screen_pos, Vector2.ZERO))
+
+
+func _try_transfer_backpack_slot_to_chest(slot_idx: int) -> bool:
+	if _bottom_hud == null or not _bottom_hud.is_chest_panel_open():
+		return false
+	var cst := _bottom_hud.get_open_chest_inventory()
+	if cst == null:
+		return false
+	var snap := inv.get_slot_snapshot(slot_idx)
+	if snap.is_empty():
+		return false
+	var idv: Variant = snap.get("id", &"")
+	var sid: StringName = idv as StringName if idv is StringName else StringName(str(idv))
+	var q := int(snap.get("q", 0))
+	if sid == &"" or q <= 0:
+		return false
+	for ti in cst.slot_count:
+		var tsp := cst.get_slot_snapshot(ti)
+		if tsp.is_empty():
+			continue
+		var tidv: Variant = tsp.get("id", &"")
+		var tid: StringName = tidv as StringName if tidv is StringName else StringName(str(tidv))
+		if tid == sid:
+			var tq := int(tsp.get("q", 0))
+			if tq < cst.stack_limit:
+				if GameInventory.apply_slot_transfer_between(inv, slot_idx, cst, ti):
+					return true
+	for ti in cst.slot_count:
+		var tsp2 := cst.get_slot_snapshot(ti)
+		if tsp2.is_empty():
+			if GameInventory.apply_slot_transfer_between(inv, slot_idx, cst, ti):
+				return true
+	return false
 
 
 func _on_backpack_ctx_menu_id(id: int) -> void:
@@ -3541,6 +3627,12 @@ func _on_backpack_ctx_menu_id(id: int) -> void:
 	if snap.is_empty():
 		return
 	var sid: StringName = StringName(str(snap.get("id", &"")))
+	if id == 400:
+		if _try_transfer_backpack_slot_to_chest(slot):
+			_show_msg("已放入木箱。")
+			_update_inv_bar()
+			_autosave_if_ready()
+		return
 	if id >= 300 and id < 309:
 		var hi := id - 300
 		var hb := _ctx_hotbar_map_id
@@ -4183,8 +4275,6 @@ func _input(event: InputEvent) -> void:
 				return
 	if _boot_styling_active:
 		return
-	if _bottom_hud != null:
-		_bottom_hud.handle_backpack_drag_mouse_global(event)
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.physical_keycode == KEY_TAB:
 			if _bottom_hud != null:
@@ -4790,6 +4880,9 @@ func _setup_bottom_hud() -> void:
 	bh.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	inv_bar.add_child(bh)
 	_bottom_hud = bh
+	var ui_host := inv_bar.get_parent() as Control
+	if ui_host != null:
+		bh.configure_chest_overlay_host(ui_host)
 	bh.hud_minimized_changed.connect(_on_bottom_hud_minimized)
 	bh.craft_axe_pressed.connect(_try_craft_axe)
 	bh.unequip_axe_pressed.connect(_on_hud_unequip_axe)
