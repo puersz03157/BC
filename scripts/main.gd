@@ -9,6 +9,7 @@ const WILD_REGION_SPAWN_GROUP := "wild_region_spawn"
 const FOREST_WORLD_REGION := Vector2i(-1, 0)
 ## Web 無系統中文字型；用 Noto CJK 當 ThemeDB fallback，避免 UI 變方塊。
 const UI_CJK_FONT := "res://assets/fonts/NotoSansCJKtc-Regular.otf"
+const PROJECT_THEME_PATH := "res://assets/ui/project_theme.tres"
 const BGM_PATH := "res://assets/audio/music/Drafting_Tomorrow.mp3"
 const USER_SAVE_PATH := "user://wilderness_home_save.json"
 const SETTINGS_PATH := "user://wilderness_settings.cfg"
@@ -82,6 +83,8 @@ const BUILD_LONG_PRESS_MS := 320
 var p2_mouse_right_down: bool = false
 
 var _msg_time: float = 0.0
+## 強制將 Noto 套到各種 Control／RichText／彈窗，Web 比一般桌面更需明確設定 theme。
+var _ui_cjk_theme: Theme = null
 var _bottom_hud: BottomHudController
 var _hud_expand_btn: Button = null
 var _build_grid: BuildGridOverlay
@@ -376,15 +379,59 @@ func player_weapon_cd(player_idx: int) -> float:
 
 
 func _apply_ui_cjk_font() -> void:
-	## 主要靠 project.godot [gui] theme/custom 設定的 project_theme.tres，
-	## 那裡已把 NotoSansCJKtc 設為 default_font，所有控件都會繼承。
-	## 這裡再把它設成 ThemeDB.fallback_font 作為雙重保障。
-	var ff := load(UI_CJK_FONT) as FontFile
+	## 以 ResourceLoader.load 取得字型（較有利匯出器追蹤依賴）；複製全域 theme，
+	## 對常見控件與 RichTextLabel.normal_font 明確指定字型（Web／WASM 上僅 fallback 偶有缺字）。
+	var ff := ResourceLoader.load(UI_CJK_FONT, "", ResourceLoader.CACHE_MODE_REUSE) as FontFile
 	if ff == null:
 		push_warning("Main: 無法載入中文字型：%s" % UI_CJK_FONT)
 		return
+	const BASE_SZ := 14
 	ThemeDB.fallback_font = ff
-	ThemeDB.fallback_font_size = 14
+	ThemeDB.fallback_font_size = BASE_SZ
+	var base_tpl := ResourceLoader.load(PROJECT_THEME_PATH, "", ResourceLoader.CACHE_MODE_REUSE) as Theme
+	var th := (base_tpl.duplicate() if base_tpl != null else Theme.new()) as Theme
+	th.default_font = ff
+	th.default_font_size = BASE_SZ
+	for tn in PackedStringArray(
+		[
+			&"Label",
+			&"Button",
+			&"LineEdit",
+			&"TextEdit",
+			&"OptionButton",
+			&"CheckBox",
+			&"CheckButton",
+			&"PopupMenu",
+			&"TooltipLabel",
+			&"TabBar",
+			&"ItemList",
+			&"SpinBox",
+			&"ProgressBar",
+		]
+	):
+		th.set_font(&"font", tn, ff)
+		th.set_font_size(&"font_size", tn, BASE_SZ)
+	th.set_font(&"normal_font", &"RichTextLabel", ff)
+	th.set_font_size(&"normal_font_size", &"RichTextLabel", BASE_SZ)
+	_ui_cjk_theme = th
+	var ui_root := $CanvasLayer/UI as Control
+	if ui_root != null:
+		ui_root.theme = th
+	var win := get_viewport().get_window()
+	if win != null:
+		win.theme = th
+	call_deferred(&"_apply_ui_cjk_font_deferred")
+
+
+func _apply_ui_cjk_font_deferred() -> void:
+	if _ui_cjk_theme == null:
+		return
+	var ui_root := $CanvasLayer/UI as Control
+	if ui_root != null:
+		ui_root.theme = _ui_cjk_theme
+	var win := get_viewport().get_window()
+	if win != null:
+		win.theme = _ui_cjk_theme
 
 
 func _mobile_touch_platform() -> bool:
