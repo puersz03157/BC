@@ -376,13 +376,11 @@ func player_weapon_cd(player_idx: int) -> float:
 
 
 func _apply_ui_cjk_font() -> void:
-	if not ResourceLoader.exists(UI_CJK_FONT):
-		push_warning("Main: 缺少中文字型：%s" % UI_CJK_FONT)
-		return
-	var ff := FontFile.new()
-	var err := ff.load_dynamic_font(UI_CJK_FONT)
-	if err != OK:
-		push_warning("Main: 字型載入失敗：%s" % error_string(err))
+	## load() 讓匯出系統正確追蹤字型依賴（load_dynamic_font 只傳字串，
+	## 匯出掃描器不一定能偵測到，且 Web VFS 不保證可用）。
+	var ff := load(UI_CJK_FONT) as FontFile
+	if ff == null:
+		push_warning("Main: 無法載入中文字型：%s" % UI_CJK_FONT)
 		return
 	ThemeDB.fallback_font = ff
 
